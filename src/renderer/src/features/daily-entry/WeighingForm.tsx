@@ -28,7 +28,10 @@ const PRODUCTOS = ['Min. Bellavista Open 1', 'Min. Bellavista Open 2', 'Gravilla
 
 const schema = z
   .object({
-    hora: z.string().min(1, 'Requerido'),
+    // Hora de entrada: cuando se registra el camión (etapa 1).
+    hora_entrada: z.string().min(1, 'Requerido'),
+    // Hora de salida: cuando se completa el peso bruto (etapa 2).
+    hora_salida: z.string().optional(),
     transportista_id: z.string().min(1, 'Requerido'),
     conductor: z.string().min(1, 'Requerido'),
     patente: z.string().min(1, 'Requerido'),
@@ -42,6 +45,10 @@ const schema = z
   .refine((data) => data.peso_bruto === 0 || data.peso_bruto > data.tara, {
     message: 'El peso bruto debe ser mayor que la tara',
     path: ['peso_bruto']
+  })
+  .refine((data) => data.peso_bruto === 0 || !!data.hora_salida, {
+    message: 'Requerido al completar el pesaje',
+    path: ['hora_salida']
   })
 
 export type WeighingFormValues = z.output<typeof schema>
@@ -66,7 +73,8 @@ function nowHHMM(): string {
 
 function emptyValues(): WeighingFormInput {
   return {
-    hora: nowHHMM(),
+    hora_entrada: nowHHMM(),
+    hora_salida: '',
     transportista_id: '',
     conductor: '',
     patente: '',
@@ -106,7 +114,10 @@ export function WeighingForm({
     if (!open) return
     if (editing) {
       reset({
-        hora: editing.hora.slice(0, 5),
+        hora_entrada: editing.hora_entrada.slice(0, 5),
+        // Al completar un pesaje en espera todavía no tiene hora de salida
+        // guardada — se propone la hora actual, editable.
+        hora_salida: editing.hora_salida?.slice(0, 5) ?? (editing.carga === null ? nowHHMM() : ''),
         transportista_id: editing.transportista_id ?? '',
         conductor: editing.conductor,
         patente: editing.patente,
@@ -187,8 +198,8 @@ export function WeighingForm({
                 )}
               />
             </Field>
-            <Field label="Hora" error={errors.hora?.message}>
-              <Input type="time" {...register('hora')} />
+            <Field label="Hora Entrada" error={errors.hora_entrada?.message}>
+              <Input type="time" {...register('hora_entrada')} />
             </Field>
           </div>
 
@@ -310,7 +321,10 @@ export function WeighingForm({
             )}
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Hora Salida" error={errors.hora_salida?.message}>
+              <Input type="time" disabled={!editing} {...register('hora_salida')} />
+            </Field>
             <Field label="Tara (kg)" error={errors.tara?.message}>
               <Input type="number" {...register('tara')} disabled />
             </Field>

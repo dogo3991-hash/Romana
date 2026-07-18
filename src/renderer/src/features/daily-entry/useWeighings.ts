@@ -15,7 +15,7 @@ export function useDailyWeighings(companyId: string | null, fecha: string) {
         .select('*')
         .eq('company_id', companyId!)
         .eq('fecha', fecha)
-        .order('hora')
+        .order('hora_entrada')
       if (error) throw error
       return data
     },

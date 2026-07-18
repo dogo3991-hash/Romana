@@ -59,14 +59,19 @@ export function TicketDocument({
         </div>
       </div>
 
-      <div className="flex justify-between">
-        <span>
-          <span className="font-semibold underline">Fecha</span>{' '}
-          {format(new Date(`${weighing.fecha}T00:00:00`), 'dd-MM-yyyy')}
-        </span>
-        <span>
-          <span className="font-semibold underline">Hora</span> {weighing.hora.slice(0, 5)}
-        </span>
+      <div className="flex flex-col gap-1">
+        <div className="flex gap-2">
+          <span className="font-semibold underline">Fecha</span>
+          <span>{format(new Date(`${weighing.fecha}T00:00:00`), 'dd-MM-yyyy')}</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="font-semibold underline">Hora Entrada</span>
+          <span>{weighing.hora_entrada.slice(0, 5)}</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="font-semibold underline">Hora Salida</span>
+          <span>{weighing.hora_salida?.slice(0, 5) ?? '—'}</span>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1 border border-neutral-800 p-3">

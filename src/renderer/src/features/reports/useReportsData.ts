@@ -13,7 +13,7 @@ export function useWeighingsInRange(companyId: string | null, from: string, to: 
         .gte('fecha', from)
         .lte('fecha', to)
         .order('fecha')
-        .order('hora')
+        .order('hora_entrada')
       if (error) throw error
       return data
     },

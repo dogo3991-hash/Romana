@@ -234,7 +234,8 @@ export type Database = {
           conductor: string
           created_at: string
           fecha: string
-          hora: string
+          hora_entrada: string
+          hora_salida: string | null
           id: string
           n_guia: string
           operator_id: string
@@ -253,7 +254,8 @@ export type Database = {
           conductor: string
           created_at?: string
           fecha: string
-          hora: string
+          hora_entrada: string
+          hora_salida?: string | null
           id?: string
           n_guia: string
           operator_id: string
@@ -272,7 +274,8 @@ export type Database = {
           conductor?: string
           created_at?: string
           fecha?: string
-          hora?: string
+          hora_entrada?: string
+          hora_salida?: string | null
           id?: string
           n_guia?: string
           operator_id?: string

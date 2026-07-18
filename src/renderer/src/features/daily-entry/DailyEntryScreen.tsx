@@ -60,7 +60,8 @@ export function DailyEntryScreen(): React.JSX.Element {
     // 0 = todavía no se pesó (el pesaje queda "en espera" hasta completar el peso bruto).
     const carga = values.peso_bruto > 0 ? values.peso_bruto - values.tara : null
     const payload = {
-      hora: values.hora,
+      hora_entrada: values.hora_entrada,
+      hora_salida: values.hora_salida || null,
       transportista_id: values.transportista_id,
       conductor: values.conductor,
       patente: values.patente,
@@ -153,7 +154,7 @@ export function DailyEntryScreen(): React.JSX.Element {
             <table className="w-full text-sm">
               <thead className="bg-warning/10 text-left text-muted">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Hora</th>
+                  <th className="px-4 py-2 font-medium">Hora Entrada</th>
                   <th className="px-4 py-2 font-medium">Transportista</th>
                   <th className="px-4 py-2 font-medium">Conductor</th>
                   <th className="px-4 py-2 font-medium">Patente</th>
@@ -174,7 +175,7 @@ export function DailyEntryScreen(): React.JSX.Element {
                 )}
                 {pending.map((w) => (
                   <tr key={w.id} className="text-ink">
-                    <td className="px-4 py-2">{w.hora.slice(0, 5)}</td>
+                    <td className="px-4 py-2">{w.hora_entrada.slice(0, 5)}</td>
                     <td className="px-4 py-2">
                       {w.transportista_id
                         ? (transportistaNameById.get(w.transportista_id) ?? '—')
@@ -212,7 +213,8 @@ export function DailyEntryScreen(): React.JSX.Element {
           <table className="w-full text-sm">
             <thead className="bg-surface text-left text-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Hora</th>
+                <th className="px-4 py-2 font-medium">Hora Entrada</th>
+                <th className="px-4 py-2 font-medium">Hora Salida</th>
                 <th className="px-4 py-2 font-medium">Transportista</th>
                 <th className="px-4 py-2 font-medium">Conductor</th>
                 <th className="px-4 py-2 font-medium">Patente</th>
@@ -228,14 +230,15 @@ export function DailyEntryScreen(): React.JSX.Element {
             <tbody className="divide-y divide-line">
               {!isLoading && completed.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-4 py-6 text-center text-muted">
+                  <td colSpan={12} className="px-4 py-6 text-center text-muted">
                     Sin pesajes completados para este día
                   </td>
                 </tr>
               )}
               {completed.map((w) => (
                 <tr key={w.id} className="text-ink">
-                  <td className="px-4 py-2">{w.hora.slice(0, 5)}</td>
+                  <td className="px-4 py-2">{w.hora_entrada.slice(0, 5)}</td>
+                  <td className="px-4 py-2">{w.hora_salida?.slice(0, 5) ?? '—'}</td>
                   <td className="px-4 py-2">
                     {w.transportista_id
                       ? (transportistaNameById.get(w.transportista_id) ?? '—')
