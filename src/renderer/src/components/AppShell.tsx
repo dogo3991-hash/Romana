@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { RefreshCw } from 'lucide-react'
 import { useAuth } from '@renderer/auth/AuthProvider'
 import { Button } from '@renderer/components/ui/button'
 import { cn } from '@renderer/lib/utils'
@@ -56,6 +57,14 @@ export function AppShell({ children }: { children: React.ReactNode }): React.JSX
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Actualizar"
+            onClick={() => window.location.reload()}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <span className="text-sm text-muted">{operator?.full_name}</span>
           <Button variant="ghost" size="sm" onClick={() => signOut()}>
             Cerrar sesión
