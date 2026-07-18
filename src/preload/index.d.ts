@@ -7,7 +7,8 @@ interface Api {
     filterName: string,
     extensions: string[]
   ) => Promise<{ canceled: boolean; filePath?: string }>
-  printTicket: (weighingId: string) => Promise<ArrayBuffer>
+  printTicketPdf: (weighingId: string) => Promise<ArrayBuffer>
+  printTicketDirect: (weighingId: string) => Promise<void>
   notifyPrintReady: () => void
   openPath: (filePath: string) => Promise<string>
 }

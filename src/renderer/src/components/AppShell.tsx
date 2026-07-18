@@ -17,11 +17,11 @@ export function AppShell({ children }: { children: React.ReactNode }): React.JSX
   const { operator, signOut } = useAuth()
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-neutral-950 text-neutral-100">
-      <header className="flex items-center justify-between border-b border-neutral-800 px-6 py-3">
+    <div className="flex h-screen w-screen flex-col bg-page text-ink">
+      <header className="flex items-center justify-between border-b border-line bg-surface px-6 py-3">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="SLM Bellavista" className="h-8 invert" />
+            <img src={logo} alt="SLM Bellavista" className="h-8" />
             <span className="text-sm font-medium tracking-tight">Control de Pesaje</span>
           </div>
           <nav className="flex items-center gap-1">
@@ -33,9 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }): React.JSX
                 className={({ isActive }) =>
                   cn(
                     'rounded-md px-3 py-1.5 text-sm transition-colors',
-                    isActive
-                      ? 'bg-neutral-800 text-neutral-100'
-                      : 'text-neutral-400 hover:text-neutral-100'
+                    isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:text-ink'
                   )
                 }
               >
@@ -48,9 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }): React.JSX
                 className={({ isActive }) =>
                   cn(
                     'rounded-md px-3 py-1.5 text-sm transition-colors',
-                    isActive
-                      ? 'bg-neutral-800 text-neutral-100'
-                      : 'text-neutral-400 hover:text-neutral-100'
+                    isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:text-ink'
                   )
                 }
               >
@@ -60,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }): React.JSX
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-neutral-400">{operator?.full_name}</span>
+          <span className="text-sm text-muted">{operator?.full_name}</span>
           <Button variant="ghost" size="sm" onClick={() => signOut()}>
             Cerrar sesión
           </Button>

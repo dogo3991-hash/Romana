@@ -14,9 +14,9 @@ import {
   useMonthSummary,
   useUpdateWeighing
 } from './useWeighings'
-import { useEntrySuggestions } from './useEntrySuggestions'
 import { WeighingForm, type WeighingFormValues } from './WeighingForm'
 import { WeighingTicket } from './WeighingTicket'
+import { ConfirmDialog } from '@renderer/components/ui/confirm-dialog'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
 import type { Database } from '@renderer/types/database.types'
 
@@ -30,14 +30,17 @@ export function DailyEntryScreen(): React.JSX.Element {
   const [editing, setEditing] = useState<Weighing | null>(null)
   const [ticketWeighing, setTicketWeighing] = useState<Weighing | null>(null)
   const [ticketOpen, setTicketOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const { data: weighings, isLoading } = useDailyWeighings(companyId, fecha)
   const { data: dailySummary } = useDailySummary(companyId, fecha)
   const [year, month] = fecha.split('-').map(Number)
   const { data: monthSummary } = useMonthSummary(companyId, year, month)
-  const { data: suggestions } = useEntrySuggestions(companyId)
   const { data: transportistas } = useTransportistas()
   const transportistaNameById = new Map(transportistas?.map((t) => [t.id, t.nombre]))
+
+  const pending = weighings?.filter((w) => w.carga === null) ?? []
+  const completed = weighings?.filter((w) => w.carga !== null) ?? []
 
   const createMutation = useCreateWeighing(companyId, fecha)
   const updateMutation = useUpdateWeighing(companyId, fecha)
@@ -54,42 +57,37 @@ export function DailyEntryScreen(): React.JSX.Element {
   }
 
   async function handleSubmit(values: WeighingFormValues): Promise<void> {
-    const carga = values.peso_bruto - values.tara
+    // 0 = todavía no se pesó (el pesaje queda "en espera" hasta completar el peso bruto).
+    const carga = values.peso_bruto > 0 ? values.peso_bruto - values.tara : null
+    const payload = {
+      hora: values.hora,
+      transportista_id: values.transportista_id,
+      conductor: values.conductor,
+      patente: values.patente,
+      n_guia: values.n_guia,
+      producto: values.producto,
+      tara: values.tara,
+      peso_bruto: values.peso_bruto > 0 ? values.peso_bruto : null,
+      carga,
+      traslado: values.traslado || null
+    }
 
     if (editing) {
-      await updateMutation.mutateAsync({
-        id: editing.id,
-        values: {
-          hora: values.hora,
-          transportista_id: values.transportista_id,
-          conductor: values.conductor,
-          patente: values.patente,
-          n_guia: values.n_guia,
-          producto: values.producto,
-          tara: values.tara,
-          peso_bruto: values.peso_bruto,
-          carga,
-          traslado: values.traslado || null
-        }
-      })
+      const wasPending = editing.carga === null
+      const updated = await updateMutation.mutateAsync({ id: editing.id, values: payload })
+      // Recién se abre el ticket automáticamente cuando este guardado es el que
+      // completa un pesaje que estaba en espera — no en cada corrección.
+      if (wasPending && carga !== null && updated) {
+        setTicketWeighing(updated)
+        setTicketOpen(true)
+      }
     } else {
-      const created = await createMutation.mutateAsync({
+      await createMutation.mutateAsync({
         company_id: companyId!,
         operator_id: operator!.id,
         fecha,
-        hora: values.hora,
-        transportista_id: values.transportista_id,
-        conductor: values.conductor,
-        patente: values.patente,
-        n_guia: values.n_guia,
-        producto: values.producto,
-        tara: values.tara,
-        peso_bruto: values.peso_bruto,
-        carga,
-        traslado: values.traslado || null
+        ...payload
       })
-      setTicketWeighing(created)
-      setTicketOpen(true)
     }
     setFormOpen(false)
   }
@@ -99,14 +97,14 @@ export function DailyEntryScreen(): React.JSX.Element {
     setTicketOpen(true)
   }
 
-  async function handleDelete(id: string): Promise<void> {
-    if (!confirm('¿Eliminar este registro de pesaje?')) return
-    await deleteMutation.mutateAsync(id)
+  async function handleDelete(): Promise<void> {
+    if (!deleteTarget) return
+    await deleteMutation.mutateAsync(deleteTarget)
   }
 
   if (!companyId) {
     return (
-      <div className="flex h-full items-center justify-center text-neutral-500">
+      <div className="flex h-full items-center justify-center text-muted">
         Selecciona una empresa para comenzar
       </div>
     )
@@ -117,11 +115,11 @@ export function DailyEntryScreen(): React.JSX.Element {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-end gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-neutral-300">Empresa</label>
+            <label className="text-sm font-medium text-muted">Empresa</label>
             <CompanySelector />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-neutral-300">Fecha</label>
+            <label className="text-sm font-medium text-muted">Fecha</label>
             <Input
               type="date"
               value={fecha}
@@ -148,75 +146,131 @@ export function DailyEntryScreen(): React.JSX.Element {
         />
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-neutral-800">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-900 text-left text-neutral-400">
-            <tr>
-              <th className="px-4 py-2 font-medium">Hora</th>
-              <th className="px-4 py-2 font-medium">Transportista</th>
-              <th className="px-4 py-2 font-medium">Conductor</th>
-              <th className="px-4 py-2 font-medium">Patente</th>
-              <th className="px-4 py-2 font-medium">N° Guía</th>
-              <th className="px-4 py-2 font-medium">Producto</th>
-              <th className="px-4 py-2 text-right font-medium">Tara (kg)</th>
-              <th className="px-4 py-2 text-right font-medium">P. Bruto (kg)</th>
-              <th className="px-4 py-2 text-right font-medium">P. Neto (kg)</th>
-              <th className="px-4 py-2 font-medium">Traslado</th>
-              <th className="px-4 py-2" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-800">
-            {isLoading && (
+      {(isLoading || pending.length > 0) && (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-ink">En Espera</h2>
+          <div className="overflow-hidden rounded-lg border-2 border-warning/40">
+            <table className="w-full text-sm">
+              <thead className="bg-warning/10 text-left text-muted">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Hora</th>
+                  <th className="px-4 py-2 font-medium">Transportista</th>
+                  <th className="px-4 py-2 font-medium">Conductor</th>
+                  <th className="px-4 py-2 font-medium">Patente</th>
+                  <th className="px-4 py-2 font-medium">N° Guía</th>
+                  <th className="px-4 py-2 font-medium">Producto</th>
+                  <th className="px-4 py-2 font-medium">Traslado</th>
+                  <th className="px-4 py-2 text-right font-medium">Tara (kg)</th>
+                  <th className="px-4 py-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {isLoading && (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-6 text-center text-muted">
+                      Cargando...
+                    </td>
+                  </tr>
+                )}
+                {pending.map((w) => (
+                  <tr key={w.id} className="text-ink">
+                    <td className="px-4 py-2">{w.hora.slice(0, 5)}</td>
+                    <td className="px-4 py-2">
+                      {w.transportista_id
+                        ? (transportistaNameById.get(w.transportista_id) ?? '—')
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-2">{w.conductor}</td>
+                    <td className="px-4 py-2">{w.patente}</td>
+                    <td className="px-4 py-2">{w.n_guia}</td>
+                    <td className="px-4 py-2">{w.producto ?? '—'}</td>
+                    <td className="px-4 py-2 text-muted">{w.traslado}</td>
+                    <td className="px-4 py-2 text-right">
+                      {w.tara?.toLocaleString('es-CL') ?? '—'}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-ink">Pesajes del Día</h2>
+        <div className="overflow-hidden rounded-lg border border-line">
+          <table className="w-full text-sm">
+            <thead className="bg-surface text-left text-muted">
               <tr>
-                <td colSpan={11} className="px-4 py-6 text-center text-neutral-500">
-                  Cargando...
-                </td>
+                <th className="px-4 py-2 font-medium">Hora</th>
+                <th className="px-4 py-2 font-medium">Transportista</th>
+                <th className="px-4 py-2 font-medium">Conductor</th>
+                <th className="px-4 py-2 font-medium">Patente</th>
+                <th className="px-4 py-2 font-medium">N° Guía</th>
+                <th className="px-4 py-2 font-medium">Producto</th>
+                <th className="px-4 py-2 text-right font-medium">Tara (kg)</th>
+                <th className="px-4 py-2 text-right font-medium">P. Bruto (kg)</th>
+                <th className="px-4 py-2 text-right font-medium">P. Neto (kg)</th>
+                <th className="px-4 py-2 font-medium">Traslado</th>
+                <th className="px-4 py-2" />
               </tr>
-            )}
-            {!isLoading && weighings?.length === 0 && (
-              <tr>
-                <td colSpan={11} className="px-4 py-6 text-center text-neutral-500">
-                  Sin pesajes registrados para este día
-                </td>
-              </tr>
-            )}
-            {weighings?.map((w) => (
-              <tr key={w.id} className="text-neutral-200">
-                <td className="px-4 py-2">{w.hora.slice(0, 5)}</td>
-                <td className="px-4 py-2">
-                  {w.transportista_id
-                    ? (transportistaNameById.get(w.transportista_id) ?? '—')
-                    : '—'}
-                </td>
-                <td className="px-4 py-2">{w.conductor}</td>
-                <td className="px-4 py-2">{w.patente}</td>
-                <td className="px-4 py-2">{w.n_guia}</td>
-                <td className="px-4 py-2">{w.producto ?? '—'}</td>
-                <td className="px-4 py-2 text-right">{w.tara?.toLocaleString('es-CL') ?? '—'}</td>
-                <td className="px-4 py-2 text-right">
-                  {w.peso_bruto?.toLocaleString('es-CL') ?? '—'}
-                </td>
-                <td className="px-4 py-2 text-right font-medium">
-                  {w.carga.toLocaleString('es-CL')}
-                </td>
-                <td className="px-4 py-2 text-neutral-400">{w.traslado}</td>
-                <td className="px-4 py-2">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openTicket(w)}>
-                      <Printer className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(w.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {!isLoading && completed.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="px-4 py-6 text-center text-muted">
+                    Sin pesajes completados para este día
+                  </td>
+                </tr>
+              )}
+              {completed.map((w) => (
+                <tr key={w.id} className="text-ink">
+                  <td className="px-4 py-2">{w.hora.slice(0, 5)}</td>
+                  <td className="px-4 py-2">
+                    {w.transportista_id
+                      ? (transportistaNameById.get(w.transportista_id) ?? '—')
+                      : '—'}
+                  </td>
+                  <td className="px-4 py-2">{w.conductor}</td>
+                  <td className="px-4 py-2">{w.patente}</td>
+                  <td className="px-4 py-2">{w.n_guia}</td>
+                  <td className="px-4 py-2">{w.producto ?? '—'}</td>
+                  <td className="px-4 py-2 text-right">{w.tara?.toLocaleString('es-CL') ?? '—'}</td>
+                  <td className="px-4 py-2 text-right">
+                    {w.peso_bruto?.toLocaleString('es-CL') ?? '—'}
+                  </td>
+                  <td className="px-4 py-2 text-right font-medium">
+                    {w.carga?.toLocaleString('es-CL') ?? '—'}
+                  </td>
+                  <td className="px-4 py-2 text-muted">{w.traslado}</td>
+                  <td className="px-4 py-2">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openTicket(w)}>
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <WeighingForm
@@ -225,10 +279,19 @@ export function DailyEntryScreen(): React.JSX.Element {
         onSubmit={handleSubmit}
         editing={editing}
         submitting={createMutation.isPending || updateMutation.isPending}
-        suggestions={suggestions}
+        pendingConductors={pending.map((w) => w.conductor)}
+        pendingPatentes={pending.map((w) => w.patente)}
       />
 
       <WeighingTicket open={ticketOpen} onOpenChange={setTicketOpen} weighing={ticketWeighing} />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        description="¿Eliminar este registro de pesaje?"
+        onConfirm={handleDelete}
+        confirming={deleteMutation.isPending}
+      />
     </div>
   )
 }
@@ -241,9 +304,9 @@ function SummaryCard({
   value: string | number
 }): React.JSX.Element {
   return (
-    <div className="flex-1 rounded-lg border border-neutral-800 bg-neutral-900/50 px-4 py-3">
-      <p className="text-xs text-neutral-500">{label}</p>
-      <p className="text-xl font-semibold text-neutral-100">{value}</p>
+    <div className="flex-1 rounded-lg border border-line bg-surface px-4 py-3">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="text-xl font-semibold text-ink">{value}</p>
     </div>
   )
 }

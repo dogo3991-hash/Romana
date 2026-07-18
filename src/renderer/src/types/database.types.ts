@@ -163,34 +163,28 @@ export type Database = {
         }
         Relationships: []
       }
-      trucks: {
+      traslados: {
         Row: {
           company_id: string
           created_at: string
           id: string
-          patente: string
-          tara: number
-          updated_at: string
+          nombre: string
         }
         Insert: {
           company_id: string
           created_at?: string
           id?: string
-          patente: string
-          tara: number
-          updated_at?: string
+          nombre: string
         }
         Update: {
           company_id?: string
           created_at?: string
           id?: string
-          patente?: string
-          tara?: number
-          updated_at?: string
+          nombre?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'trucks_company_id_fkey'
+            foreignKeyName: 'traslados_company_id_fkey'
             columns: ['company_id']
             isOneToOne: false
             referencedRelation: 'companies'
@@ -198,9 +192,44 @@ export type Database = {
           }
         ]
       }
+      trucks: {
+        Row: {
+          created_at: string
+          id: string
+          patente: string
+          tara: number
+          transportista_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          patente: string
+          tara: number
+          transportista_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          patente?: string
+          tara?: number
+          transportista_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'trucks_transportista_id_fkey'
+            columns: ['transportista_id']
+            isOneToOne: false
+            referencedRelation: 'transportistas'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       weighings: {
         Row: {
-          carga: number
+          carga: number | null
           company_id: string
           conductor: string
           created_at: string
@@ -219,7 +248,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          carga: number
+          carga?: number | null
           company_id: string
           conductor: string
           created_at?: string
@@ -238,7 +267,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          carga?: number
+          carga?: number | null
           company_id?: string
           conductor?: string
           created_at?: string

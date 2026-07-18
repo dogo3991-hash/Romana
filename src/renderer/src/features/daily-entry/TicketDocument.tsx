@@ -16,7 +16,7 @@ export function TicketDocument({
   conductorRut
 }: TicketDocumentProps): React.JSX.Element {
   return (
-    <div className="flex flex-col gap-3 bg-white p-5 text-xs text-neutral-900">
+    <div className="flex flex-col gap-3 bg-white p-5 text-xs text-ink">
       <div className="border-b border-neutral-800 pb-2">
         <p className="text-sm font-bold">SLM BELLAVISTA</p>
         <p>RUT: 76.900.250-2</p>
@@ -84,7 +84,7 @@ export function TicketDocument({
         </div>
       </div>
 
-      <div className="flex justify-between text-[10px] text-neutral-400">
+      <div className="flex justify-between text-[10px] text-muted">
         <span>SLM Bellavista</span>
         <span>Fecha Impresión: {format(new Date(), 'dd-MM-yyyy')}</span>
       </div>

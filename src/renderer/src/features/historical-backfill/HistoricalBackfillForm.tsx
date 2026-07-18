@@ -96,7 +96,7 @@ export function HistoricalBackfillForm({
           </div>
 
           {hasDetailedData && (
-            <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+            <p className="rounded-md bg-primary/10 px-3 py-2 text-xs text-primary">
               Ya existe detalle diario cargado para este mes y empresa. El Resumen Mensual usará ese
               detalle, no este total.
             </p>
@@ -142,7 +142,7 @@ function Field({
     <div className="flex flex-col gap-1.5">
       <Label>{label}</Label>
       {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   )
 }

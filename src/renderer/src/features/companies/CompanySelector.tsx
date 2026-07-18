@@ -11,11 +11,11 @@ export function CompanySelector(): React.JSX.Element {
   const { companyId, setCompanyId, companies, loading } = useCompanyContext()
 
   if (loading) {
-    return <div className="h-10 w-56 animate-pulse rounded-md bg-neutral-800" />
+    return <div className="h-10 w-56 animate-pulse rounded-md bg-line/40" />
   }
 
   if (companies.length === 0) {
-    return <span className="text-sm text-neutral-500">Sin empresas cargadas</span>
+    return <span className="text-sm text-muted">Sin empresas cargadas</span>
   }
 
   return (

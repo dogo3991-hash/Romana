@@ -7,41 +7,40 @@ import { Input } from '@renderer/components/ui/input'
 import { Label } from '@renderer/components/ui/label'
 import type { Database } from '@renderer/types/database.types'
 
-type Transportista = Database['public']['Tables']['transportistas']['Row']
+type Traslado = Database['public']['Tables']['traslados']['Row']
 
 const schema = z.object({
-  nombre: z.string().min(1, 'Requerido'),
-  rut: z.string().min(1, 'Requerido')
+  nombre: z.string().min(1, 'Requerido')
 })
 
-export type TransportistaFormValues = z.infer<typeof schema>
+export type TrasladoFormValues = z.infer<typeof schema>
 
-interface TransportistaFormProps {
+interface TrasladoFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (values: TransportistaFormValues) => Promise<void>
-  editing: Transportista | null
+  onSubmit: (values: TrasladoFormValues) => Promise<void>
+  editing: Traslado | null
   submitting: boolean
 }
 
-export function TransportistaForm({
+export function TrasladoForm({
   open,
   onOpenChange,
   onSubmit,
   editing,
   submitting
-}: TransportistaFormProps): React.JSX.Element {
+}: TrasladoFormProps): React.JSX.Element {
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors }
-  } = useForm<TransportistaFormValues>({
+  } = useForm<TrasladoFormValues>({
     resolver: zodResolver(schema),
-    values: editing ? { nombre: editing.nombre, rut: editing.rut } : { nombre: '', rut: '' }
+    values: editing ? { nombre: editing.nombre } : { nombre: '' }
   })
 
-  async function submit(values: TransportistaFormValues): Promise<void> {
+  async function submit(values: TrasladoFormValues): Promise<void> {
     await onSubmit(values)
     reset()
   }
@@ -50,20 +49,14 @@ export function TransportistaForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{editing ? 'Editar transportista' : 'Nuevo transportista'}</DialogTitle>
+          <DialogTitle>{editing ? 'Editar traslado' : 'Nuevo traslado'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(submit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label>Nombre</Label>
+            <Label>Nombre del lugar</Label>
             <Input {...register('nombre')} />
             {errors.nombre && <p className="text-xs text-danger">{errors.nombre.message}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label>Rut</Label>
-            <Input {...register('rut')} />
-            {errors.rut && <p className="text-xs text-danger">{errors.rut.message}</p>}
           </div>
 
           <div className="mt-2 flex justify-end gap-2">

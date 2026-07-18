@@ -22,13 +22,13 @@ export function LoginScreen(): React.JSX.Element {
   }
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-neutral-950 text-neutral-100">
+    <div className="flex h-screen w-screen items-center justify-center bg-page text-ink">
       <form
         onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-5 rounded-lg border border-neutral-800 bg-neutral-900/50 p-8"
+        className="flex w-full max-w-sm flex-col gap-5 rounded-lg border border-line bg-surface p-8 shadow-sm"
       >
         <div className="flex flex-col items-center gap-2 pb-2">
-          <img src={logo} alt="SLM Bellavista" className="w-40 invert" />
+          <img src={logo} alt="SLM Bellavista" className="w-40" />
           <h1 className="text-lg font-semibold tracking-tight">Control de Pesaje</h1>
         </div>
 
@@ -56,7 +56,7 @@ export function LoginScreen(): React.JSX.Element {
           />
         </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
 
         <Button type="submit" disabled={submitting}>
           {submitting ? 'Ingresando...' : 'Ingresar'}

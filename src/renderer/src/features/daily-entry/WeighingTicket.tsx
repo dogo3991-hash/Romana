@@ -23,6 +23,7 @@ export function WeighingTicket({
 }: WeighingTicketProps): React.JSX.Element {
   const { data: transportistas } = useTransportistas()
   const { data: conductors } = useConductorsByTransportista(weighing?.transportista_id ?? null)
+  const [saving, setSaving] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -31,12 +32,12 @@ export function WeighingTicket({
   const transportista = transportistas?.find((t) => t.id === weighing.transportista_id)
   const conductorRut = conductors?.find((c) => c.nombre === weighing.conductor)?.rut
 
-  async function handlePrint(): Promise<void> {
+  async function handleSavePdf(): Promise<void> {
     if (!weighing) return
     setError(null)
-    setPrinting(true)
+    setSaving(true)
     try {
-      const pdfBuffer = await window.api.printTicket(weighing.id)
+      const pdfBuffer = await window.api.printTicketPdf(weighing.id)
       const result = await window.api.saveFile(
         pdfBuffer,
         `Ticket-${weighing.ticket_number}.pdf`,
@@ -47,7 +48,20 @@ export function WeighingTicket({
         await window.api.openPath(result.filePath)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo generar el ticket')
+      setError(err instanceof Error ? err.message : 'No se pudo generar el PDF')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handlePrint(): Promise<void> {
+    if (!weighing) return
+    setError(null)
+    setPrinting(true)
+    try {
+      await window.api.printTicketDirect(weighing.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo imprimir el ticket')
     } finally {
       setPrinting(false)
     }
@@ -66,14 +80,17 @@ export function WeighingTicket({
           conductorRut={conductorRut}
         />
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
 
         <div className="mt-2 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cerrar
           </Button>
+          <Button variant="outline" onClick={handleSavePdf} disabled={saving}>
+            {saving ? 'Generando...' : 'Guardar PDF'}
+          </Button>
           <Button onClick={handlePrint} disabled={printing}>
-            {printing ? 'Generando...' : 'Imprimir / Guardar como PDF'}
+            {printing ? 'Abriendo...' : 'Imprimir'}
           </Button>
         </div>
       </DialogContent>

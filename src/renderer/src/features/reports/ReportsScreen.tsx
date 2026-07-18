@@ -59,7 +59,7 @@ export function ReportsScreen(): React.JSX.Element {
 
   if (!companyId) {
     return (
-      <div className="flex h-full items-center justify-center text-neutral-500">
+      <div className="flex h-full items-center justify-center text-muted">
         Selecciona una empresa para comenzar
       </div>
     )
@@ -68,23 +68,23 @@ export function ReportsScreen(): React.JSX.Element {
   return (
     <div className="flex flex-col gap-8 p-6">
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-neutral-300">Empresa</label>
+        <label className="text-sm font-medium text-muted">Empresa</label>
         <CompanySelector />
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      <section className="flex flex-col gap-4 rounded-lg border border-neutral-800 p-5">
+      <section className="flex flex-col gap-4 rounded-lg border border-line p-5">
         <div>
-          <h2 className="text-base font-semibold text-neutral-100">Detalle de Pesajes</h2>
-          <p className="text-sm text-neutral-500">
+          <h2 className="text-base font-semibold text-ink">Detalle de Pesajes</h2>
+          <p className="text-sm text-muted">
             Una fila por viaje. Elige un mismo día para un reporte diario, o un rango más amplio
             para uno mensual.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-neutral-300">Desde</label>
+            <label className="text-sm text-muted">Desde</label>
             <Input
               type="date"
               value={from}
@@ -93,7 +93,7 @@ export function ReportsScreen(): React.JSX.Element {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-neutral-300">Hasta</label>
+            <label className="text-sm text-muted">Hasta</label>
             <Input
               type="date"
               value={to}
@@ -108,10 +108,10 @@ export function ReportsScreen(): React.JSX.Element {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4 rounded-lg border border-neutral-800 p-5">
+      <section className="flex flex-col gap-4 rounded-lg border border-line p-5">
         <div>
-          <h2 className="text-base font-semibold text-neutral-100">Histórico Mensual</h2>
-          <p className="text-sm text-neutral-500">
+          <h2 className="text-base font-semibold text-ink">Histórico Mensual</h2>
+          <p className="text-sm text-muted">
             Totales mensuales cargados a mano en Carga Histórica.
           </p>
         </div>

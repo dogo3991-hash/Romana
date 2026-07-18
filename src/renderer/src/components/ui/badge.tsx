@@ -7,9 +7,9 @@ interface BadgeProps {
 }
 
 const variantClasses = {
-  default: 'bg-amber-500/15 text-amber-400',
-  success: 'bg-emerald-500/15 text-emerald-400',
-  muted: 'bg-neutral-700/50 text-neutral-300'
+  default: 'bg-primary/10 text-primary',
+  success: 'bg-success/10 text-success',
+  muted: 'bg-line/40 text-muted'
 }
 
 export function Badge({ variant = 'default', className, children }: BadgeProps): React.JSX.Element {

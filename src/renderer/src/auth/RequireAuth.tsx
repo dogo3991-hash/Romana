@@ -6,7 +6,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }): React.
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-neutral-950 text-neutral-400">
+      <div className="flex h-screen w-screen items-center justify-center bg-page text-muted">
         Cargando...
       </div>
     )
@@ -18,8 +18,8 @@ export function RequireAuth({ children }: { children: React.ReactNode }): React.
 
   if (!operator || !operator.active) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center gap-2 bg-neutral-950 text-neutral-100">
-        <p className="text-sm text-neutral-400">
+      <div className="flex h-screen w-screen flex-col items-center justify-center gap-2 bg-page text-ink">
+        <p className="text-sm text-muted">
           Tu usuario no tiene un perfil de operador activo. Contacta a un administrador.
         </p>
       </div>

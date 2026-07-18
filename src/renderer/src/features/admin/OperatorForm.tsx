@@ -54,22 +54,22 @@ export function OperatorForm({
           <div className="flex flex-col gap-1.5">
             <Label>Nombre completo</Label>
             <Input {...register('full_name')} />
-            {errors.full_name && <p className="text-xs text-red-400">{errors.full_name.message}</p>}
+            {errors.full_name && <p className="text-xs text-danger">{errors.full_name.message}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label>Email</Label>
             <Input type="email" {...register('email')} />
-            {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label>Contraseña inicial</Label>
             <Input type="password" {...register('password')} />
-            {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-neutral-300">
+          <label className="flex items-center gap-2 text-sm text-muted">
             <input type="checkbox" className="h-4 w-4" {...register('is_admin')} />
             Es administrador
           </label>

@@ -10,8 +10,10 @@ const api = {
     extensions: string[]
   ): Promise<{ canceled: boolean; filePath?: string }> =>
     ipcRenderer.invoke('save-file', { buffer, defaultName, filterName, extensions }),
-  printTicket: (weighingId: string): Promise<ArrayBuffer> =>
-    ipcRenderer.invoke('print-ticket', weighingId),
+  printTicketPdf: (weighingId: string): Promise<ArrayBuffer> =>
+    ipcRenderer.invoke('print-ticket-pdf', weighingId),
+  printTicketDirect: (weighingId: string): Promise<void> =>
+    ipcRenderer.invoke('print-ticket-direct', weighingId),
   notifyPrintReady: (): void => {
     ipcRenderer.send('ticket-print-ready')
   },

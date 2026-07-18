@@ -31,7 +31,7 @@ function CompaniesSection(): React.JSX.Element {
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-neutral-100">Empresas transportistas</h2>
+      <h2 className="text-lg font-semibold text-ink">Empresas transportistas</h2>
 
       <form onSubmit={handleCreate} className="flex gap-2">
         <Input
@@ -46,25 +46,25 @@ function CompaniesSection(): React.JSX.Element {
         </Button>
       </form>
 
-      <div className="overflow-hidden rounded-lg border border-neutral-800">
+      <div className="overflow-hidden rounded-lg border border-line">
         <table className="w-full text-sm">
-          <thead className="bg-neutral-900 text-left text-neutral-400">
+          <thead className="bg-surface text-left text-muted">
             <tr>
               <th className="px-4 py-2 font-medium">Nombre</th>
               <th className="px-4 py-2 font-medium">Estado</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800">
+          <tbody className="divide-y divide-line">
             {isLoading && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-neutral-500">
+                <td colSpan={3} className="px-4 py-6 text-center text-muted">
                   Cargando...
                 </td>
               </tr>
             )}
             {companies?.map((c) => (
-              <tr key={c.id} className="text-neutral-200">
+              <tr key={c.id} className="text-ink">
                 <td className="px-4 py-2">{c.name}</td>
                 <td className="px-4 py-2">
                   <Badge variant={c.active ? 'success' : 'muted'}>
@@ -111,18 +111,18 @@ function OperatorsSection(): React.JSX.Element {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-neutral-100">Operadores</h2>
+        <h2 className="text-lg font-semibold text-ink">Operadores</h2>
         <Button onClick={() => setFormOpen(true)}>
           <Plus className="h-4 w-4" />
           Nuevo operador
         </Button>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-800">
+      <div className="overflow-hidden rounded-lg border border-line">
         <table className="w-full text-sm">
-          <thead className="bg-neutral-900 text-left text-neutral-400">
+          <thead className="bg-surface text-left text-muted">
             <tr>
               <th className="px-4 py-2 font-medium">Nombre</th>
               <th className="px-4 py-2 font-medium">Email</th>
@@ -131,18 +131,18 @@ function OperatorsSection(): React.JSX.Element {
               <th className="px-4 py-2" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800">
+          <tbody className="divide-y divide-line">
             {isLoading && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                <td colSpan={5} className="px-4 py-6 text-center text-muted">
                   Cargando...
                 </td>
               </tr>
             )}
             {operators?.map((o) => (
-              <tr key={o.id} className="text-neutral-200">
+              <tr key={o.id} className="text-ink">
                 <td className="px-4 py-2">{o.full_name}</td>
-                <td className="px-4 py-2 text-neutral-400">{o.email}</td>
+                <td className="px-4 py-2 text-muted">{o.email}</td>
                 <td className="px-4 py-2">
                   <Badge variant={o.is_admin ? 'default' : 'muted'}>
                     {o.is_admin ? 'Administrador' : 'Operador'}

@@ -31,10 +31,7 @@ function loadRendererRoute(window: BrowserWindow, hash: string): Promise<void> {
   return window.loadFile(join(__dirname, '../renderer/index.html'), { hash })
 }
 
-async function handlePrintTicket(
-  _event: Electron.IpcMainInvokeEvent,
-  weighingId: string
-): Promise<ArrayBuffer> {
+async function createReadyTicketPrintWindow(weighingId: string): Promise<BrowserWindow> {
   const printWindow = new BrowserWindow({
     show: false,
     width: 850,
@@ -45,22 +42,44 @@ async function handlePrintTicket(
     }
   })
 
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Tiempo de espera agotado')), 10000)
-      ipcMain.once('ticket-print-ready', () => {
-        clearTimeout(timeout)
-        resolve()
-      })
-      loadRendererRoute(printWindow, `/ticket-print?id=${weighingId}`)
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Tiempo de espera agotado')), 10000)
+    ipcMain.once('ticket-print-ready', () => {
+      clearTimeout(timeout)
+      resolve()
     })
+    loadRendererRoute(printWindow, `/ticket-print?id=${weighingId}`)
+  })
 
+  return printWindow
+}
+
+async function handlePrintTicketPdf(
+  _event: Electron.IpcMainInvokeEvent,
+  weighingId: string
+): Promise<ArrayBuffer> {
+  const printWindow = await createReadyTicketPrintWindow(weighingId)
+  try {
     const pdfBuffer = await printWindow.webContents.printToPDF({
       pageSize: 'Letter',
       printBackground: true,
       margins: { marginType: 'default' }
     })
     return new Uint8Array(pdfBuffer).buffer
+  } finally {
+    printWindow.destroy()
+  }
+}
+
+async function handlePrintTicketDirect(
+  _event: Electron.IpcMainInvokeEvent,
+  weighingId: string
+): Promise<void> {
+  const printWindow = await createReadyTicketPrintWindow(weighingId)
+  try {
+    await new Promise<void>((resolve) => {
+      printWindow.webContents.print({ printBackground: true }, () => resolve())
+    })
   } finally {
     printWindow.destroy()
   }
@@ -116,7 +135,8 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
   ipcMain.handle('save-file', handleSaveFile)
-  ipcMain.handle('print-ticket', handlePrintTicket)
+  ipcMain.handle('print-ticket-pdf', handlePrintTicketPdf)
+  ipcMain.handle('print-ticket-direct', handlePrintTicketDirect)
   ipcMain.handle('open-path', (_event, filePath: string) => shell.openPath(filePath))
 
   createWindow()

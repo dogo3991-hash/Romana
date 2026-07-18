@@ -71,13 +71,13 @@ export function ConductorForm({
           <div className="flex flex-col gap-1.5">
             <Label>Nombre</Label>
             <Input {...register('nombre')} />
-            {errors.nombre && <p className="text-xs text-red-400">{errors.nombre.message}</p>}
+            {errors.nombre && <p className="text-xs text-danger">{errors.nombre.message}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label>Rut</Label>
             <Input {...register('rut')} />
-            {errors.rut && <p className="text-xs text-red-400">{errors.rut.message}</p>}
+            {errors.rut && <p className="text-xs text-danger">{errors.rut.message}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -101,7 +101,7 @@ export function ConductorForm({
               )}
             />
             {errors.transportista_id && (
-              <p className="text-xs text-red-400">{errors.transportista_id.message}</p>
+              <p className="text-xs text-danger">{errors.transportista_id.message}</p>
             )}
           </div>
 

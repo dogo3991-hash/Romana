@@ -3,7 +3,26 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 
-const Dialog = DialogPrimitive.Root
+function Dialog({
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>): React.JSX.Element {
+  function handleOpenChange(open: boolean): void {
+    onOpenChange?.(open)
+    if (!open) {
+      // Radix can leave `pointer-events: none` stuck on <body> if a dialog closes
+      // while another one opens in the same tick (e.g. the ticket dialog opening
+      // right as the weighing form closes), leaving the page unresponsive to
+      // clicks/typing the next time a dialog is used. This clears it defensively
+      // shortly after any dialog closes, regardless of the cause.
+      setTimeout(() => {
+        document.body.style.removeProperty('pointer-events')
+      }, 200)
+    }
+  }
+
+  return <DialogPrimitive.Root onOpenChange={handleOpenChange} {...props} />
+}
 const DialogTrigger = DialogPrimitive.Trigger
 
 function DialogContent({
@@ -13,16 +32,16 @@ function DialogContent({
 }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>): React.JSX.Element {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
       <DialogPrimitive.Content
         className={cn(
-          'fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-neutral-800 bg-neutral-900 p-6 shadow-lg',
+          'fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line bg-surface p-6 shadow-lg',
           className
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 text-neutral-500 hover:text-neutral-200">
+        <DialogPrimitive.Close className="absolute right-4 top-4 text-muted hover:text-ink">
           <X className="h-4 w-4" />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
@@ -43,7 +62,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('text-base font-semibold text-neutral-100', className)}
+    className={cn('text-base font-semibold text-ink', className)}
     {...props}
   />
 ))

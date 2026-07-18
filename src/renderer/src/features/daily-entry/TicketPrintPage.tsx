@@ -38,7 +38,7 @@ export function TicketPrintPage(): React.JSX.Element {
   }, [ready, isError])
 
   if (!weighing) {
-    return <div className="bg-white p-5 text-xs text-neutral-900">Cargando ticket...</div>
+    return <div className="bg-white p-5 text-xs text-ink">Cargando ticket...</div>
   }
 
   const transportista = transportistas?.find((t) => t.id === weighing.transportista_id)

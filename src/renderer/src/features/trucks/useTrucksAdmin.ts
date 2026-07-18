@@ -1,44 +1,68 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@renderer/lib/supabaseClient'
+import type { Database } from '@renderer/types/database.types'
+
+type TruckWithTransportista = Database['public']['Tables']['trucks']['Row'] & {
+  transportistas: { nombre: string } | null
+}
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function useTrucks(companyId: string | null) {
+export function useAllTrucks() {
   return useQuery({
-    queryKey: ['trucks', companyId],
+    queryKey: ['trucks-admin'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('trucks')
-        .select('*')
-        .eq('company_id', companyId!)
+        .select('*, transportistas(nombre)')
+        .order('patente')
+      if (error) throw error
+      return data as TruckWithTransportista[]
+    }
+  })
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function useTrucksByTransportista(transportistaId: string | null) {
+  return useQuery({
+    queryKey: ['trucks-by-transportista', transportistaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('trucks')
+        .select('patente, tara')
+        .eq('transportista_id', transportistaId!)
         .order('patente')
       if (error) throw error
       return data
     },
-    enabled: !!companyId
+    enabled: !!transportistaId
   })
 }
 
 interface TruckInput {
   patente: string
   tara: number
+  transportista_id: string
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function useCreateTruck(companyId: string | null) {
+export function useCreateTruck() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (values: TruckInput) => {
-      const { error } = await supabase.from('trucks').insert({ ...values, company_id: companyId! })
+      const { error } = await supabase.from('trucks').insert(values)
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trucks', companyId] })
+    onSuccess: (_data, values) => {
+      queryClient.invalidateQueries({ queryKey: ['trucks-admin'] })
+      queryClient.invalidateQueries({
+        queryKey: ['trucks-by-transportista', values.transportista_id]
+      })
     }
   })
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function useUpdateTruck(companyId: string | null) {
+export function useUpdateTruck() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, values }: { id: string; values: TruckInput }) => {
@@ -46,13 +70,14 @@ export function useUpdateTruck(companyId: string | null) {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trucks', companyId] })
+      queryClient.invalidateQueries({ queryKey: ['trucks-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['trucks-by-transportista'] })
     }
   })
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function useDeleteTruck(companyId: string | null) {
+export function useDeleteTruck() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
@@ -60,7 +85,8 @@ export function useDeleteTruck(companyId: string | null) {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trucks', companyId] })
+      queryClient.invalidateQueries({ queryKey: ['trucks-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['trucks-by-transportista'] })
     }
   })
 }

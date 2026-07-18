@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,15 +13,14 @@ import {
   SelectTrigger,
   SelectValue
 } from '@renderer/components/ui/select'
-import { AutocompleteInput } from '@renderer/components/ui/autocomplete-input'
 import {
   useConductorsByTransportista,
   useTransportistas
 } from '@renderer/features/conductors/useConductorsAdmin'
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
-import { useTrucks } from '@renderer/features/trucks/useTrucksAdmin'
+import { useTrucksByTransportista } from '@renderer/features/trucks/useTrucksAdmin'
+import { useTraslados } from '@renderer/features/trucks/useTraslados'
 import type { Database } from '@renderer/types/database.types'
-import type { EntrySuggestions } from './useEntrySuggestions'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
 
@@ -35,10 +35,11 @@ const schema = z
     n_guia: z.string().min(1, 'Requerido'),
     producto: z.string().min(1, 'Requerido'),
     tara: z.coerce.number().int('Debe ser un número entero').positive('Debe ser mayor a 0'),
-    peso_bruto: z.coerce.number().int('Debe ser un número entero').positive('Debe ser mayor a 0'),
+    // 0 = todavía no se pesó (queda "en espera"); si se ingresa, tiene que ser > tara.
+    peso_bruto: z.coerce.number().int('Debe ser un número entero').min(0),
     traslado: z.string().optional()
   })
-  .refine((data) => data.peso_bruto > data.tara, {
+  .refine((data) => data.peso_bruto === 0 || data.peso_bruto > data.tara, {
     message: 'El peso bruto debe ser mayor que la tara',
     path: ['peso_bruto']
   })
@@ -52,12 +53,29 @@ interface WeighingFormProps {
   onSubmit: (values: WeighingFormValues) => Promise<void>
   editing: Weighing | null
   submitting: boolean
-  suggestions: EntrySuggestions | undefined
+  // Conductores/patentes que ya están en la lista de espera — se ocultan al
+  // agregar un pesaje nuevo para no crear un duplicado del mismo camión.
+  pendingConductors: string[]
+  pendingPatentes: string[]
 }
 
 function nowHHMM(): string {
   const now = new Date()
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
+function emptyValues(): WeighingFormInput {
+  return {
+    hora: nowHHMM(),
+    transportista_id: '',
+    conductor: '',
+    patente: '',
+    n_guia: '',
+    producto: '',
+    tara: '',
+    peso_bruto: '',
+    traslado: ''
+  }
 }
 
 export function WeighingForm({
@@ -66,7 +84,8 @@ export function WeighingForm({
   onSubmit,
   editing,
   submitting,
-  suggestions
+  pendingConductors,
+  pendingPatentes
 }: WeighingFormProps): React.JSX.Element {
   const {
     register,
@@ -78,36 +97,46 @@ export function WeighingForm({
     formState: { errors }
   } = useForm<WeighingFormInput, unknown, WeighingFormValues>({
     resolver: zodResolver(schema),
-    values: editing
-      ? {
-          hora: editing.hora.slice(0, 5),
-          transportista_id: editing.transportista_id ?? '',
-          conductor: editing.conductor,
-          patente: editing.patente,
-          n_guia: editing.n_guia,
-          producto: editing.producto ?? '',
-          tara: editing.tara ?? 0,
-          peso_bruto: editing.peso_bruto ?? 0,
-          traslado: editing.traslado ?? ''
-        }
-      : {
-          hora: nowHHMM(),
-          transportista_id: '',
-          conductor: '',
-          patente: '',
-          n_guia: '',
-          producto: '',
-          tara: 0,
-          peso_bruto: 0,
-          traslado: ''
-        }
+    defaultValues: emptyValues()
   })
+
+  // Solo re-sincroniza el formulario cuando el dialog se abre o cambia el registro
+  // a editar — nunca en cada render, para no pisar lo que el usuario va tipeando.
+  useEffect(() => {
+    if (!open) return
+    if (editing) {
+      reset({
+        hora: editing.hora.slice(0, 5),
+        transportista_id: editing.transportista_id ?? '',
+        conductor: editing.conductor,
+        patente: editing.patente,
+        n_guia: editing.n_guia,
+        producto: editing.producto ?? '',
+        tara: editing.tara ?? '',
+        peso_bruto: editing.peso_bruto ?? '',
+        traslado: editing.traslado ?? ''
+      })
+    } else {
+      reset(emptyValues())
+    }
+  }, [open, editing, reset])
 
   const { companyId } = useCompanyContext()
   const { data: transportistas } = useTransportistas()
   const transportistaId = watch('transportista_id')
   const { data: conductors } = useConductorsByTransportista(transportistaId || null)
-  const { data: trucks } = useTrucks(companyId)
+  const { data: trucks } = useTrucksByTransportista(transportistaId || null)
+  const { data: traslados } = useTraslados(companyId)
+
+  // Al agregar un pesaje nuevo (no al editar uno existente) se ocultan los
+  // conductores/patentes que ya están en la lista de espera, para no dejar
+  // registrar dos veces el mismo camión antes de completar el primero.
+  const conductorOptions = editing
+    ? conductors
+    : conductors?.filter((c) => !pendingConductors.includes(c.nombre))
+  const patenteOptions = editing
+    ? trucks
+    : trucks?.filter((t) => !pendingPatentes.includes(t.patente))
 
   function handlePatenteChange(patente: string): void {
     setValue('patente', patente)
@@ -121,14 +150,19 @@ export function WeighingForm({
 
   async function submit(values: WeighingFormValues): Promise<void> {
     await onSubmit(values)
-    reset()
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{editing ? 'Editar pesaje' : 'Nuevo pesaje'}</DialogTitle>
+          <DialogTitle>
+            {!editing
+              ? 'Nuevo pesaje (en espera)'
+              : editing.carga === null
+                ? 'Completar pesaje'
+                : 'Editar pesaje'}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(submit)} className="flex flex-col gap-4">
@@ -172,7 +206,7 @@ export function WeighingForm({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {conductors?.map((c) => (
+                    {conductorOptions?.map((c) => (
                       <SelectItem key={c.nombre} value={c.nombre}>
                         {c.nombre}
                       </SelectItem>
@@ -217,11 +251,15 @@ export function WeighingForm({
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={handlePatenteChange}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
+                      <SelectValue
+                        placeholder={
+                          !transportistaId ? 'Elige un transportista primero' : 'Seleccionar'
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {trucks?.map((t) => (
-                        <SelectItem key={t.id} value={t.patente}>
+                      {patenteOptions?.map((t) => (
+                        <SelectItem key={t.patente} value={t.patente}>
                           {t.patente}
                         </SelectItem>
                       ))}
@@ -235,22 +273,46 @@ export function WeighingForm({
                 control={control}
                 name="traslado"
                 render={({ field }) => (
-                  <AutocompleteInput
-                    value={field.value ?? ''}
-                    onValueChange={field.onChange}
-                    options={suggestions?.traslados ?? []}
-                  />
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {traslados?.map((t) => (
+                        <SelectItem key={t.id} value={t.nombre}>
+                          {t.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <Field
+            label="Peso Bruto (kg)"
+            error={errors.peso_bruto?.message}
+            labelClassName="text-sm font-semibold text-primary"
+          >
+            <Input
+              type="number"
+              step="1"
+              min="1"
+              disabled={!editing}
+              {...register('peso_bruto')}
+              className="h-14 border-2 border-primary bg-primary/5 text-xl font-semibold text-ink disabled:bg-page disabled:text-muted"
+            />
+            {!editing && (
+              <p className="text-xs text-muted">
+                Se completa después, cuando el camión pase por la báscula.
+              </p>
+            )}
+          </Field>
+
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Tara (kg)" error={errors.tara?.message}>
               <Input type="number" {...register('tara')} disabled />
-            </Field>
-            <Field label="Peso Bruto (kg)" error={errors.peso_bruto?.message}>
-              <Input type="number" step="1" min="1" {...register('peso_bruto')} />
             </Field>
             <Field label="Peso Neto (kg)">
               <Input value={neto !== null ? neto.toLocaleString('es-CL') : '—'} disabled />
@@ -274,17 +336,19 @@ export function WeighingForm({
 function Field({
   label,
   error,
+  labelClassName,
   children
 }: {
   label: string
   error?: string
+  labelClassName?: string
   children: React.ReactNode
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
+      <Label className={labelClassName}>{label}</Label>
       {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   )
 }

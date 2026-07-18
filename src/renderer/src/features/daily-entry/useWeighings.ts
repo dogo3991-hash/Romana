@@ -91,8 +91,14 @@ export function useUpdateWeighing(companyId: string | null, fecha: string) {
   const invalidate = useInvalidateWeighings(companyId, fecha)
   return useMutation({
     mutationFn: async ({ id, values }: { id: string; values: WeighingUpdate }) => {
-      const { error } = await supabase.from('weighings').update(values).eq('id', id)
+      const { data, error } = await supabase
+        .from('weighings')
+        .update(values)
+        .eq('id', id)
+        .select()
+        .single()
       if (error) throw error
+      return data
     },
     onSuccess: invalidate
   })
