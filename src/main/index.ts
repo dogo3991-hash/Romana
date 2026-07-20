@@ -3,6 +3,16 @@ import { join } from 'path'
 import { writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import {
+  startCameraProcess,
+  stopCameraProcess,
+  isCameraProcessRunning,
+  stopCameraProcessIfOwned
+} from './cameraProcess'
+
+// Permite que la alerta sonora de detección por cámara (Fase 4) suene sin requerir
+// un gesto previo del usuario, ya que se dispara desde un evento de WebSocket, no un clic.
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
 interface SaveFileRequest {
   buffer: ArrayBuffer
@@ -138,6 +148,9 @@ app.whenReady().then(() => {
   ipcMain.handle('print-ticket-pdf', handlePrintTicketPdf)
   ipcMain.handle('print-ticket-direct', handlePrintTicketDirect)
   ipcMain.handle('open-path', (_event, filePath: string) => shell.openPath(filePath))
+  ipcMain.handle('camera-process:start', () => startCameraProcess())
+  ipcMain.handle('camera-process:stop', () => stopCameraProcess())
+  ipcMain.handle('camera-process:status', () => isCameraProcessRunning())
 
   createWindow()
 
@@ -152,6 +165,8 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  // Si esta app abrió SLM-Camara-Romana, se cierra junto con ella.
+  stopCameraProcessIfOwned()
   if (process.platform !== 'darwin') {
     app.quit()
   }

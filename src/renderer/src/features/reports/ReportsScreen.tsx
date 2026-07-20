@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format, startOfMonth } from 'date-fns'
+import { format } from 'date-fns'
 import { FileSpreadsheet } from 'lucide-react'
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
 import { CompanySelector } from '@renderer/features/companies/CompanySelector'
@@ -12,7 +12,7 @@ import { exportHistoricalReport, exportWeighingsReport } from './exportExcel'
 
 export function ReportsScreen(): React.JSX.Element {
   const { companyId, companies } = useCompanyContext()
-  const [from, setFrom] = useState(() => format(startOfMonth(new Date()), 'yyyy-MM-dd'))
+  const [from, setFrom] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [to, setTo] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [exportingDetail, setExportingDetail] = useState(false)
   const [exportingHistorical, setExportingHistorical] = useState(false)

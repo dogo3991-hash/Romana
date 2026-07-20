@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Video, VideoOff, Loader2 } from 'lucide-react'
 import { useAuth } from '@renderer/auth/AuthProvider'
 import { Button } from '@renderer/components/ui/button'
 import { cn } from '@renderer/lib/utils'
+import { useCameraProcess } from '@renderer/features/camera/useCameraProcess'
 import logo from '@renderer/assets/logo.png'
 
 const navItems = [
@@ -16,6 +17,7 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { operator, signOut } = useAuth()
+  const camera = useCameraProcess()
 
   return (
     <div className="flex h-screen w-screen flex-col bg-page text-ink">
@@ -57,6 +59,42 @@ export function AppShell({ children }: { children: React.ReactNode }): React.JSX
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          <Button
+            variant={camera.state === 'running' ? 'destructive' : 'outline'}
+            size="sm"
+            disabled={camera.state === 'starting'}
+            className={
+              camera.state === 'stopped'
+                ? 'border-transparent bg-success text-white hover:bg-success/90'
+                : undefined
+            }
+            title={
+              camera.error ??
+              (camera.state === 'running'
+                ? 'Cierra SLM-Camara-Romana'
+                : 'Abre SLM-Camara-Romana y activa la alerta/apertura automática')
+            }
+            onClick={() => (camera.state === 'running' ? camera.stop() : camera.start())}
+          >
+            {camera.state === 'starting' && (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Iniciando…
+              </>
+            )}
+            {camera.state === 'running' && (
+              <>
+                <Video className="h-4 w-4" />
+                Detener cámara
+              </>
+            )}
+            {camera.state === 'stopped' && (
+              <>
+                <VideoOff className="h-4 w-4" />
+                Activar cámara
+              </>
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="icon"

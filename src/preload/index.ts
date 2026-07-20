@@ -17,7 +17,13 @@ const api = {
   notifyPrintReady: (): void => {
     ipcRenderer.send('ticket-print-ready')
   },
-  openPath: (filePath: string): Promise<string> => ipcRenderer.invoke('open-path', filePath)
+  openPath: (filePath: string): Promise<string> => ipcRenderer.invoke('open-path', filePath),
+  cameraProcess: {
+    start: (): Promise<{ started: boolean; error?: string }> =>
+      ipcRenderer.invoke('camera-process:start'),
+    stop: (): Promise<void> => ipcRenderer.invoke('camera-process:stop'),
+    status: (): Promise<boolean> => ipcRenderer.invoke('camera-process:status')
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

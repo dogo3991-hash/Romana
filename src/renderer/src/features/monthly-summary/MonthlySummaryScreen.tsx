@@ -5,11 +5,13 @@ import { CompanySelector } from '@renderer/features/companies/CompanySelector'
 import { Input } from '@renderer/components/ui/input'
 import { Badge } from '@renderer/components/ui/badge'
 import { useDailyBreakdown, useMonthTotal } from './useMonthlySummary'
+import { DayDetailDialog } from './DayDetailDialog'
 
 export function MonthlySummaryScreen(): React.JSX.Element {
   const { companyId } = useCompanyContext()
   const [monthValue, setMonthValue] = useState(() => format(new Date(), 'yyyy-MM'))
   const [year, month] = monthValue.split('-').map(Number)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   const { data: days, isLoading } = useDailyBreakdown(companyId, year, month)
   const { data: monthTotal } = useMonthTotal(companyId, year, month)
@@ -70,7 +72,11 @@ export function MonthlySummaryScreen(): React.JSX.Element {
               </tr>
             )}
             {days?.map((d) => (
-              <tr key={d.fecha} className="text-ink">
+              <tr
+                key={d.fecha}
+                className="cursor-pointer text-ink hover:bg-page"
+                onClick={() => setSelectedDay(d.fecha)}
+              >
                 <td className="px-4 py-2">{d.fecha}</td>
                 <td className="px-4 py-2 text-right">{d.movimientos}</td>
                 <td className="px-4 py-2 text-right">{d.carga_total?.toLocaleString('es-CL')}</td>
@@ -88,6 +94,12 @@ export function MonthlySummaryScreen(): React.JSX.Element {
           </tfoot>
         </table>
       </div>
+
+      <DayDetailDialog
+        companyId={companyId}
+        fecha={selectedDay}
+        onOpenChange={(open) => !open && setSelectedDay(null)}
+      />
     </div>
   )
 }

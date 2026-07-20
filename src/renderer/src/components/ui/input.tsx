@@ -3,10 +3,16 @@ import { cn } from '@renderer/lib/utils'
 
 const UPPERCASE_TYPES = new Set([undefined, 'text'])
 
-const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, type, onChange, ...props }, ref) => {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  // Se salta el forzado de mayúsculas sin importar el `type` — para campos como
+  // contraseña que alternan entre "password" y "text" al mostrarse/ocultarse.
+  preserveCase?: boolean
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, onChange, preserveCase, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-      if (UPPERCASE_TYPES.has(type)) {
+      if (!preserveCase && UPPERCASE_TYPES.has(type)) {
         const { selectionStart, selectionEnd } = e.target
         e.target.value = e.target.value.toUpperCase()
         if (selectionStart !== null && selectionEnd !== null) {

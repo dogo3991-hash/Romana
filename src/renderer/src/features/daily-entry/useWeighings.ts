@@ -19,7 +19,7 @@ export function useDailyWeighings(companyId: string | null, fecha: string) {
       if (error) throw error
       return data
     },
-    enabled: !!companyId
+    enabled: !!companyId && !!fecha
   })
 }
 
@@ -70,6 +70,7 @@ function useInvalidateWeighings(companyId: string | null, fecha: string): () => 
       queryKey: ['monthly-summary-detailed', companyId, year, month]
     })
     queryClient.invalidateQueries({ queryKey: ['monthly-summary'] })
+    queryClient.invalidateQueries({ queryKey: ['daily-breakdown', companyId, year, month] })
   }
 }
 

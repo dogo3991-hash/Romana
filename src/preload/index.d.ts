@@ -11,6 +11,11 @@ interface Api {
   printTicketDirect: (weighingId: string) => Promise<void>
   notifyPrintReady: () => void
   openPath: (filePath: string) => Promise<string>
+  cameraProcess: {
+    start: () => Promise<{ started: boolean; error?: string }>
+    stop: () => Promise<void>
+    status: () => Promise<boolean>
+  }
 }
 
 declare global {

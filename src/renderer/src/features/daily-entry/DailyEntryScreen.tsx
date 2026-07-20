@@ -18,6 +18,9 @@ import { WeighingForm, type WeighingFormValues } from './WeighingForm'
 import { WeighingTicket } from './WeighingTicket'
 import { ConfirmDialog } from '@renderer/components/ui/confirm-dialog'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
+import { useCameraAlerts } from '@renderer/features/camera/useCameraAlerts'
+import { CameraPreview } from '@renderer/features/camera/CameraPreview'
+import pesajeIcon from '@renderer/assets/pesaje-icon.png'
 import type { Database } from '@renderer/types/database.types'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
@@ -41,6 +44,8 @@ export function DailyEntryScreen(): React.JSX.Element {
 
   const pending = weighings?.filter((w) => w.carga === null) ?? []
   const completed = weighings?.filter((w) => w.carga !== null) ?? []
+
+  useCameraAlerts(pending, openEdit)
 
   const createMutation = useCreateWeighing(companyId, fecha)
   const updateMutation = useUpdateWeighing(companyId, fecha)
@@ -147,65 +152,73 @@ export function DailyEntryScreen(): React.JSX.Element {
         />
       </div>
 
-      {(isLoading || pending.length > 0) && (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-ink">En Espera</h2>
-          <div className="overflow-hidden rounded-lg border-2 border-warning/40">
-            <table className="w-full text-sm">
-              <thead className="bg-warning/10 text-left text-muted">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Hora Entrada</th>
-                  <th className="px-4 py-2 font-medium">Transportista</th>
-                  <th className="px-4 py-2 font-medium">Conductor</th>
-                  <th className="px-4 py-2 font-medium">Patente</th>
-                  <th className="px-4 py-2 font-medium">N° Guía</th>
-                  <th className="px-4 py-2 font-medium">Producto</th>
-                  <th className="px-4 py-2 font-medium">Traslado</th>
-                  <th className="px-4 py-2 text-right font-medium">Tara (kg)</th>
-                  <th className="px-4 py-2" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {isLoading && (
+      <div className="flex items-start gap-4">
+        {(isLoading || pending.length > 0) && (
+          <div className="flex flex-1 flex-col gap-2">
+            <h2 className="text-sm font-semibold text-ink">En Espera</h2>
+            <div className="overflow-hidden rounded-lg border-2 border-warning/40">
+              <table className="w-full text-sm">
+                <thead className="bg-warning/10 text-left text-muted">
                   <tr>
-                    <td colSpan={9} className="px-4 py-6 text-center text-muted">
-                      Cargando...
-                    </td>
+                    <th className="px-4 py-2 font-medium">Hora Entrada</th>
+                    <th className="px-4 py-2 font-medium">Transportista</th>
+                    <th className="px-4 py-2 font-medium">Conductor</th>
+                    <th className="px-4 py-2 font-medium">Patente</th>
+                    <th className="px-4 py-2 font-medium">N° Guía</th>
+                    <th className="px-4 py-2 font-medium">Producto</th>
+                    <th className="px-4 py-2 font-medium">Traslado</th>
+                    <th className="px-4 py-2 text-right font-medium">Tara (kg)</th>
+                    <th className="px-4 py-2" />
                   </tr>
-                )}
-                {pending.map((w) => (
-                  <tr key={w.id} className="text-ink">
-                    <td className="px-4 py-2">{w.hora_entrada.slice(0, 5)}</td>
-                    <td className="px-4 py-2">
-                      {w.transportista_id
-                        ? (transportistaNameById.get(w.transportista_id) ?? '—')
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-2">{w.conductor}</td>
-                    <td className="px-4 py-2">{w.patente}</td>
-                    <td className="px-4 py-2">{w.n_guia}</td>
-                    <td className="px-4 py-2">{w.producto ?? '—'}</td>
-                    <td className="px-4 py-2 text-muted">{w.traslado}</td>
-                    <td className="px-4 py-2 text-right">
-                      {w.tara?.toLocaleString('es-CL') ?? '—'}
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {isLoading && (
+                    <tr>
+                      <td colSpan={9} className="px-4 py-6 text-center text-muted">
+                        Cargando...
+                      </td>
+                    </tr>
+                  )}
+                  {pending.map((w) => (
+                    <tr key={w.id} className="text-ink">
+                      <td className="px-4 py-2">{w.hora_entrada.slice(0, 5)}</td>
+                      <td className="px-4 py-2">
+                        {w.transportista_id
+                          ? (transportistaNameById.get(w.transportista_id) ?? '—')
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-2">{w.conductor}</td>
+                      <td className="px-4 py-2">{w.patente}</td>
+                      <td className="px-4 py-2">{w.n_guia}</td>
+                      <td className="px-4 py-2">{w.producto ?? '—'}</td>
+                      <td className="px-4 py-2 text-muted">{w.traslado}</td>
+                      <td className="px-4 py-2 text-right">
+                        {w.tara?.toLocaleString('es-CL') ?? '—'}
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Agregar peso bruto"
+                            onClick={() => openEdit(w)}
+                          >
+                            <img src={pesajeIcon} className="h-4 w-4" alt="Agregar peso bruto" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        <CameraPreview />
+      </div>
 
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-ink">Pesajes del Día</h2>
