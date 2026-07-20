@@ -1,6 +1,6 @@
 {
   "name": "slm-bellavista-pesaje",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "App de control de pesaje de camiones - SLM Bellavista",
   "main": "./out/main/index.js",
   "author": "SLM Bellavista",
@@ -39,6 +39,7 @@
     "lucide-react": "^1.25.0",
     "react-hook-form": "^7.81.0",
     "react-router-dom": "^7.18.1",
+    "recharts": "^3.9.2",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },

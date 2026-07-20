@@ -9,6 +9,7 @@ import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { useWeighingsInRange } from './useReportsData'
 import { exportHistoricalReport, exportWeighingsReport } from './exportExcel'
+import { TruckHistorySection } from './TruckHistorySection'
 
 export function ReportsScreen(): React.JSX.Element {
   const { companyId, companies } = useCompanyContext()
@@ -120,6 +121,8 @@ export function ReportsScreen(): React.JSX.Element {
           {exportingHistorical ? 'Generando...' : 'Exportar a Excel'}
         </Button>
       </section>
+
+      <TruckHistorySection />
     </div>
   )
 }
