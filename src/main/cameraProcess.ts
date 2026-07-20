@@ -3,14 +3,34 @@ import { spawn, exec, type ChildProcess } from 'child_process'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
-function cameraExePath(): string {
-  return join(
-    app.getPath('documents'),
-    'SLM-Camara-Romana',
-    'dist',
-    'win-unpacked',
-    'SLM-Camara-Romana.exe'
+// La ubicación real del .exe depende de cómo se instaló: el instalador NSIS lo deja
+// en la carpeta estándar de instalación por usuario de Windows; en esta PC de
+// desarrollo se prueba directo desde la carpeta de build sin instalar. Se prueban
+// ambas rutas y se usa la primera que exista.
+function cameraExeCandidates(): string[] {
+  const candidates: string[] = []
+  if (process.env.LOCALAPPDATA) {
+    // El instalador NSIS usa el "name" de package.json (no el productName) como
+    // nombre de carpeta: minúsculas y guiones, no "SLM Camara Romana". Verificado
+    // instalando de verdad: %LOCALAPPDATA%\Programs\slm-camara-romana\...
+    candidates.push(
+      join(process.env.LOCALAPPDATA, 'Programs', 'slm-camara-romana', 'SLM-Camara-Romana.exe')
+    )
+  }
+  candidates.push(
+    join(
+      app.getPath('documents'),
+      'SLM-Camara-Romana',
+      'dist',
+      'win-unpacked',
+      'SLM-Camara-Romana.exe'
+    )
   )
+  return candidates
+}
+
+function cameraExePath(): string | null {
+  return cameraExeCandidates().find(existsSync) ?? null
 }
 
 let cameraProcess: ChildProcess | null = null
@@ -21,10 +41,10 @@ export function startCameraProcess(): { started: boolean; error?: string } {
   }
 
   const exePath = cameraExePath()
-  if (!existsSync(exePath)) {
+  if (!exePath) {
     return {
       started: false,
-      error: `No se encontró ${exePath}. Hay que generar el build de SLM-Camara-Romana (npm run build:unpack) primero.`
+      error: `No se encontró SLM-Camara-Romana.exe. Rutas probadas: ${cameraExeCandidates().join(' | ')}`
     }
   }
 

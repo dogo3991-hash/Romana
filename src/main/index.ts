@@ -9,6 +9,7 @@ import {
   isCameraProcessRunning,
   stopCameraProcessIfOwned
 } from './cameraProcess'
+import { setupAutoUpdater } from './autoUpdate'
 
 // Permite que la alerta sonora de detección por cámara (Fase 4) suene sin requerir
 // un gesto previo del usuario, ya que se dispara desde un evento de WebSocket, no un clic.
@@ -152,6 +153,7 @@ app.whenReady().then(() => {
   ipcMain.handle('camera-process:stop', () => stopCameraProcess())
   ipcMain.handle('camera-process:status', () => isCameraProcessRunning())
 
+  setupAutoUpdater()
   createWindow()
 
   app.on('activate', function () {
