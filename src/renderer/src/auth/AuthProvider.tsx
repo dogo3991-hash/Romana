@@ -9,8 +9,10 @@ interface AuthContextValue {
   session: Session | null
   operator: Operator | null
   loading: boolean
+  authError: string | null
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  retryLoadOperator: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -19,6 +21,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const [session, setSession] = useState<Session | null>(null)
   const [operator, setOperator] = useState<Operator | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -44,14 +48,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
     async function loadOperator(): Promise<void> {
       setLoading(true)
-      const { data } = await supabase
-        .from('operators')
-        .select('*')
-        .eq('id', session!.user.id)
-        .single()
-      if (cancelled) return
-      setOperator(data ?? null)
-      setLoading(false)
+      setAuthError(null)
+      try {
+        const { data, error } = await supabase
+          .from('operators')
+          .select('*')
+          .eq('id', session!.user.id)
+          .single()
+        if (cancelled) return
+        if (error) throw error
+        setOperator(data ?? null)
+      } catch (err) {
+        if (cancelled) return
+        setAuthError(err instanceof Error ? err.message : 'No se pudo cargar tu perfil')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
 
     loadOperator()
@@ -59,7 +71,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     return () => {
       cancelled = true
     }
-  }, [session])
+  }, [session, retryCount])
+
+  function retryLoadOperator(): void {
+    setRetryCount((c) => c + 1)
+  }
 
   async function signIn(email: string, password: string): Promise<{ error: string | null }> {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -71,7 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }
 
   return (
-    <AuthContext.Provider value={{ session, operator, loading, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ session, operator, loading, authError, signIn, signOut, retryLoadOperator }}
+    >
       {children}
     </AuthContext.Provider>
   )
