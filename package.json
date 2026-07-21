@@ -1,6 +1,6 @@
 {
   "name": "slm-bellavista-pesaje",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "App de control de pesaje de camiones - SLM Bellavista",
   "main": "./out/main/index.js",
   "author": "SLM Bellavista",

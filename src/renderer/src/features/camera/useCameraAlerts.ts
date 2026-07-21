@@ -7,7 +7,7 @@ type Weighing = Database['public']['Tables']['weighings']['Row']
 
 const BEEP_COUNT = 3
 const BEEP_SPACING_S = 0.25
-const BEEP_PEAK_GAIN = 0.42 // 0.35 + 20%
+const BEEP_PEAK_GAIN = 0.83
 
 function playAlertBeeps(): void {
   try {
