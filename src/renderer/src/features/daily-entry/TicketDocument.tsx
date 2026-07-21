@@ -24,8 +24,16 @@ export function TicketDocument({
       </div>
 
       <div className="border-2 border-blue-700 py-1 text-center font-bold">
-        TICKET DE PESAJE N° {weighing.ticket_number}
+        {weighing.ticket_number != null
+          ? `TICKET DE PESAJE N° ${weighing.ticket_number}`
+          : 'TICKET PROVISORIO — pendiente de sincronizar'}
       </div>
+      {weighing.ticket_number == null && (
+        <div className="border border-warning bg-warning/10 py-1 text-center text-[11px] font-semibold text-warning">
+          Documento provisorio: el N° de Ticket definitivo se asignará al reconectar con el
+          servidor.
+        </div>
+      )}
       <div className="border border-neutral-800 py-0.5 text-center font-semibold">
         Despacho de Carga
       </div>

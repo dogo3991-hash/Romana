@@ -18,11 +18,16 @@ export function CompanyProvider({ children }: { children: React.ReactNode }): Re
     () => localStorage.getItem(STORAGE_KEY) || null
   )
 
-  // Si la selección guardada ya no es válida (empresa desactivada/eliminada), cae a la primera disponible.
+  // Mientras "companies" todavia no resolvio (carga inicial, o esperando el
+  // fallback a IndexedDB si esta offline), confiamos en el id guardado en
+  // localStorage en vez de caer a null -- así no se bloquea toda la app
+  // durante ese instante. Una vez que companies resuelve, se valida/corrige.
   const companyId =
-    companies && companies.some((c) => c.id === storedCompanyId)
+    companies === undefined
       ? storedCompanyId
-      : (companies?.[0]?.id ?? null)
+      : companies.some((c) => c.id === storedCompanyId)
+        ? storedCompanyId
+        : (companies[0]?.id ?? null)
 
   function setCompanyId(id: string): void {
     localStorage.setItem(STORAGE_KEY, id)

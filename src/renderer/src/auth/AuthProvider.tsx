@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@renderer/lib/supabaseClient'
+import { getOfflineDb } from '@renderer/lib/offlineDb'
+import { readThroughOne } from '@renderer/lib/offlineRepo'
 import type { Database } from '@renderer/types/database.types'
 
 type Operator = Database['public']['Tables']['operators']['Row']
@@ -50,14 +52,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       setLoading(true)
       setAuthError(null)
       try {
-        const { data, error } = await supabase
-          .from('operators')
-          .select('*')
-          .eq('id', session!.user.id)
-          .single()
+        const data = await readThroughOne<Operator>({
+          remote: () => supabase.from('operators').select('*').eq('id', session!.user.id).single(),
+          readLocal: async () => {
+            const db = await getOfflineDb()
+            return (await db.get('operators', session!.user.id)) ?? null
+          },
+          writeLocal: async (row) => {
+            const db = await getOfflineDb()
+            await db.put('operators', row)
+          }
+        })
         if (cancelled) return
-        if (error) throw error
-        setOperator(data ?? null)
+        if (!data) throw new Error('sin conexión y sin perfil guardado localmente')
+        setOperator(data)
       } catch (err) {
         if (cancelled) return
         setAuthError(err instanceof Error ? err.message : 'sin conexión con el servidor')

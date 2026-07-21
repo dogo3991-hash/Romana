@@ -38,12 +38,11 @@ export function WeighingTicket({
     setSaving(true)
     try {
       const pdfBuffer = await window.api.printTicketPdf(weighing.id)
-      const result = await window.api.saveFile(
-        pdfBuffer,
-        `Ticket-${weighing.ticket_number}.pdf`,
-        'PDF',
-        ['pdf']
-      )
+      const fileName =
+        weighing.ticket_number != null
+          ? `Ticket-${weighing.ticket_number}.pdf`
+          : `Ticket-provisorio-${weighing.id.slice(0, 8)}.pdf`
+      const result = await window.api.saveFile(pdfBuffer, fileName, 'PDF', ['pdf'])
       if (!result.canceled && result.filePath) {
         await window.api.openPath(result.filePath)
       }

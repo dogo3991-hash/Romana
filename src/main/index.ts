@@ -64,14 +64,25 @@ async function createReadyTicketPrintWindow(weighingId: string): Promise<Browser
     }
   })
 
-  await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Tiempo de espera agotado')), 10000)
-    ipcMain.once('ticket-print-ready', () => {
-      clearTimeout(timeout)
-      resolve()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      // Mas largo que el timeout de fetch del cliente de Supabase (15s): si la
+      // conectividad recien se corto y todavia no se detecto, la primera
+      // lectura offline puede tardar hasta ese tiempo en caer al dato local.
+      const timeout = setTimeout(() => reject(new Error('Tiempo de espera agotado')), 20000)
+      ipcMain.once('ticket-print-ready', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+      loadRendererRoute(printWindow, `/ticket-print?id=${weighingId}`)
     })
-    loadRendererRoute(printWindow, `/ticket-print?id=${weighingId}`)
-  })
+  } catch (err) {
+    // Si nunca llega a estar lista, la ventana oculta quedaba abierta para
+    // siempre (proceso zombie) porque el finally del llamador nunca se
+    // alcanza cuando esta funcion misma es la que lanza la excepcion.
+    printWindow.destroy()
+    throw err
+  }
 
   return printWindow
 }

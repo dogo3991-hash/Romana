@@ -1,9 +1,12 @@
+import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { RefreshCw, Video, VideoOff, Loader2 } from 'lucide-react'
 import { useAuth } from '@renderer/auth/AuthProvider'
 import { Button } from '@renderer/components/ui/button'
 import { cn } from '@renderer/lib/utils'
 import { useCameraProcess } from '@renderer/features/camera/useCameraProcess'
+import { SyncStatusIndicator } from '@renderer/components/SyncStatusIndicator'
+import { drainQueue } from '@renderer/lib/syncEngine'
 import logo from '@renderer/assets/logo.png'
 
 const navItems = [
@@ -19,6 +22,10 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { operator, signOut } = useAuth()
   const camera = useCameraProcess()
+
+  useEffect(() => {
+    void drainQueue()
+  }, [])
 
   return (
     <div className="flex h-screen w-screen flex-col bg-page text-ink">
@@ -60,6 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }): React.JSX
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          <SyncStatusIndicator />
           <Button
             variant={camera.state === 'running' ? 'destructive' : 'outline'}
             size="sm"
