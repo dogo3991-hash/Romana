@@ -42,7 +42,11 @@ export function MonthlySummaryScreen(): React.JSX.Element {
         </div>
         {monthTotal && (
           <Badge variant={monthTotal.is_detailed ? 'success' : 'muted'}>
-            {monthTotal.is_detailed ? 'Detallado' : 'Histórico'}
+            {monthTotal.is_detailed && monthTotal.is_historical
+              ? 'Mixto (Detallado + Histórico)'
+              : monthTotal.is_detailed
+                ? 'Detallado'
+                : 'Histórico'}
           </Badge>
         )}
       </div>

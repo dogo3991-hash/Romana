@@ -336,6 +336,7 @@ export type Database = {
           carga_total: number | null
           company_id: string | null
           is_detailed: boolean | null
+          is_historical: boolean | null
           month: number | null
           movimientos: number | null
           year: number | null
