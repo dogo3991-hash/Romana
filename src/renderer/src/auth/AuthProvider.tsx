@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         setOperator(data ?? null)
       } catch (err) {
         if (cancelled) return
-        setAuthError(err instanceof Error ? err.message : 'No se pudo cargar tu perfil')
+        setAuthError(err instanceof Error ? err.message : 'sin conexión con el servidor')
       } finally {
         if (!cancelled) setLoading(false)
       }
