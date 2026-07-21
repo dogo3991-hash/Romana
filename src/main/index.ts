@@ -11,6 +11,17 @@ import {
 } from './cameraProcess'
 import { setupAutoUpdater } from './autoUpdate'
 
+// Esta app corre empaquetada sin consola adjunta: si stdout/stderr queda como un pipe
+// roto, cualquier console.log/error revienta el proceso principal con EPIPE (el error
+// "A JavaScript error occurred in the main process" que se ve a veces). Ignorarlo acá
+// evita que un log de rutina tire abajo toda la app.
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code !== 'EPIPE') throw err
+})
+process.stderr.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code !== 'EPIPE') throw err
+})
+
 // Permite que la alerta sonora de detección por cámara (Fase 4) suene sin requerir
 // un gesto previo del usuario, ya que se dispara desde un evento de WebSocket, no un clic.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
