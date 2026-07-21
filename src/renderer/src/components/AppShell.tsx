@@ -12,7 +12,8 @@ const navItems = [
   { to: '/camiones', label: 'Camiones' },
   { to: '/resumen-mensual', label: 'Resumen Mensual' },
   { to: '/historico', label: 'Carga Histórica' },
-  { to: '/informes', label: 'Informes de Pesaje' }
+  { to: '/informes', label: 'Informes de Pesaje' },
+  { to: '/acerca-de', label: 'Acerca de' }
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }): React.JSX.Element {
