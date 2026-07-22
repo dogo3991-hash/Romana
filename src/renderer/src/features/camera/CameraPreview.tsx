@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
-import { CameraOff } from 'lucide-react'
+import { CameraOff, Loader2 } from 'lucide-react'
 import {
   subscribeToCameraMessages,
   useCameraConnected,
   type CameraMessage
 } from './cameraConnection'
+import { useCameraProcess } from './useCameraProcess'
 
 export function CameraPreview(): React.JSX.Element {
   const connected = useCameraConnected()
+  const { state } = useCameraProcess()
   const [frame, setFrame] = useState<string | null>(null)
 
   useEffect(() => {
@@ -30,6 +32,11 @@ export function CameraPreview(): React.JSX.Element {
             alt="Vista en vivo de la romana"
             className="h-full w-full object-cover"
           />
+        ) : state === 'starting' ? (
+          <div className="flex flex-col items-center gap-1 text-muted">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-xs">Iniciando cámara...</span>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-1 text-muted">
             <CameraOff className="h-5 w-5" />
