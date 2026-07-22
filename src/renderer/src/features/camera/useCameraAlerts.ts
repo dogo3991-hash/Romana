@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { Database } from '@renderer/types/database.types'
 import { matchPatente } from './matchPatente'
 import { subscribeToCameraMessages, type CameraMessage } from './cameraConnection'
+import truckAlertSound from '@renderer/assets/truck-alert.ogg'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
 
@@ -33,6 +34,17 @@ function playAlertBeeps(): void {
   }
 }
 
+function playTruckAlertSound(): void {
+  try {
+    const audio = new Audio(truckAlertSound)
+    audio.play().catch((err: unknown) => {
+      console.error('playTruckAlertSound failed:', err)
+    })
+  } catch (err) {
+    console.error('playTruckAlertSound failed:', err)
+  }
+}
+
 /**
  * Reacciona a los eventos de SLM-Camara-Romana (proyecto separado, ver isolate-risky-features)
  * usando la conexión WebSocket compartida (cameraConnection.ts). Si ese proceso no está
@@ -52,6 +64,7 @@ export function useCameraAlerts(pending: Weighing[], openEdit: (w: Weighing) => 
     return subscribeToCameraMessages((payload: CameraMessage) => {
       if (payload.type === 'truck-detected') {
         playAlertBeeps()
+        playTruckAlertSound()
       } else if (payload.type === 'plate-candidate' && typeof payload.text === 'string') {
         const candidates = pendingRef.current.map((w) => w.patente)
         const match = matchPatente(payload.text, candidates)
