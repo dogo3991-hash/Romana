@@ -26,7 +26,7 @@ import type { Database } from '@renderer/types/database.types'
 type Weighing = Database['public']['Tables']['weighings']['Row']
 
 export function DailyEntryScreen(): React.JSX.Element {
-  const { companyId } = useCompanyContext()
+  const { companyId, loading: companyLoading } = useCompanyContext()
   const { operator } = useAuth()
   const [fecha, setFecha] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [formOpen, setFormOpen] = useState(false)
@@ -106,6 +106,10 @@ export function DailyEntryScreen(): React.JSX.Element {
   async function handleDelete(): Promise<void> {
     if (!deleteTarget) return
     await deleteMutation.mutateAsync(deleteTarget)
+  }
+
+  if (companyLoading) {
+    return <div className="flex h-full items-center justify-center text-muted">Cargando...</div>
   }
 
   if (!companyId) {

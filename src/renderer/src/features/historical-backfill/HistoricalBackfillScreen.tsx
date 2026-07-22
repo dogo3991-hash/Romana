@@ -31,7 +31,7 @@ const MONTH_NAMES = [
 ]
 
 export function HistoricalBackfillScreen(): React.JSX.Element {
-  const { companyId } = useCompanyContext()
+  const { companyId, loading: companyLoading } = useCompanyContext()
   const { operator } = useAuth()
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<HistoricalTotal | null>(null)
@@ -67,6 +67,10 @@ export function HistoricalBackfillScreen(): React.JSX.Element {
   async function handleDelete(): Promise<void> {
     if (!deleteTarget) return
     await deleteMutation.mutateAsync(deleteTarget)
+  }
+
+  if (companyLoading) {
+    return <div className="flex h-full items-center justify-center text-muted">Cargando...</div>
   }
 
   if (!companyId) {

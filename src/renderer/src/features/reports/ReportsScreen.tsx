@@ -12,7 +12,7 @@ import { exportHistoricalReport, exportWeighingsReport } from './exportExcel'
 import { TruckHistorySection } from './TruckHistorySection'
 
 export function ReportsScreen(): React.JSX.Element {
-  const { companyId, companies } = useCompanyContext()
+  const { companyId, companies, loading: companyLoading } = useCompanyContext()
   const [from, setFrom] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [to, setTo] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [exportingDetail, setExportingDetail] = useState(false)
@@ -56,6 +56,10 @@ export function ReportsScreen(): React.JSX.Element {
     } finally {
       setExportingHistorical(false)
     }
+  }
+
+  if (companyLoading) {
+    return <div className="flex h-full items-center justify-center text-muted">Cargando...</div>
   }
 
   if (!companyId) {

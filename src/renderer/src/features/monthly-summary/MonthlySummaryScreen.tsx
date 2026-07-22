@@ -8,13 +8,17 @@ import { useDailyBreakdown, useMonthTotal } from './useMonthlySummary'
 import { DayDetailDialog } from './DayDetailDialog'
 
 export function MonthlySummaryScreen(): React.JSX.Element {
-  const { companyId } = useCompanyContext()
+  const { companyId, loading: companyLoading } = useCompanyContext()
   const [monthValue, setMonthValue] = useState(() => format(new Date(), 'yyyy-MM'))
   const [year, month] = monthValue.split('-').map(Number)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   const { data: days, isLoading } = useDailyBreakdown(companyId, year, month)
   const { data: monthTotal } = useMonthTotal(companyId, year, month)
+
+  if (companyLoading) {
+    return <div className="flex h-full items-center justify-center text-muted">Cargando...</div>
+  }
 
   if (!companyId) {
     return (
