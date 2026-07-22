@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
 import { useAllTrucks } from '@renderer/features/trucks/useTrucksAdmin'
+import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
+import { Badge } from '@renderer/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -10,7 +12,13 @@ import {
   SelectValue
 } from '@renderer/components/ui/select'
 import { Input } from '@renderer/components/ui/input'
-import { useTruckWeighings, type TruckWeighingRecord } from './useTruckHistory'
+import { Button } from '@renderer/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
+import {
+  useTruckWeighings,
+  useTrucksPeriodSummary,
+  type TruckWeighingRecord
+} from './useTruckHistory'
 
 type Granularity = 'diario' | 'mensual' | 'anual'
 
@@ -83,6 +91,39 @@ function buildBuckets(
     .map(([y, v]) => ({ label: String(y), viajes: v.viajes, carga: v.carga }))
 }
 
+function lastDayOfMonth(monthStr: string): string {
+  const [y, m] = monthStr.split('-').map(Number)
+  const last = new Date(y, m, 0).getDate()
+  return `${monthStr}-${String(last).padStart(2, '0')}`
+}
+
+// La tabla por defecto (sin patente elegida) usa un período puntual acorde a la
+// granularidad — un día, un mes o un año — a diferencia de los gráficos por camión
+// (con patente elegida), que usan un período contenedor (mes con detalle por día,
+// año con detalle por mes) para dibujar la tendencia.
+function tablePeriodRange(
+  granularity: Granularity,
+  day: string,
+  month: string,
+  year: string
+): { from: string; to: string } {
+  if (granularity === 'diario') return { from: day, to: day }
+  if (granularity === 'mensual') return { from: `${month}-01`, to: lastDayOfMonth(month) }
+  return { from: `${year}-01-01`, to: `${year}-12-31` }
+}
+
+// Distintivo visual para identificar rápido de un vistazo a qué transportista
+// pertenece cada patente en la tabla — el resto de transportistas queda sin marcar.
+function transportistaBadge(
+  nombre: string | undefined
+): { label: string; variant: 'default' | 'success' } | null {
+  if (!nombre) return null
+  const normalized = nombre.trim().toLowerCase()
+  if (normalized === 'transportes ramon araya') return { label: nombre, variant: 'default' }
+  if (normalized === 'soc. transportes araya') return { label: nombre, variant: 'success' }
+  return null
+}
+
 function TripsTooltip({
   active,
   payload,
@@ -122,20 +163,40 @@ function CargaTooltip({
 export function TruckHistorySection(): React.JSX.Element {
   const { companyId } = useCompanyContext()
   const { data: allTrucks } = useAllTrucks()
+  const { data: transportistas } = useTransportistas()
+  const transportistaNameById = useMemo(
+    () => new Map(transportistas?.map((t) => [t.id, t.nombre])),
+    [transportistas]
+  )
   const [patente, setPatente] = useState<string | null>(null)
   const [granularity, setGranularity] = useState<Granularity>('diario')
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [year, setYear] = useState(() => String(new Date().getFullYear()))
+  const [tableDay, setTableDay] = useState(() => new Date().toISOString().slice(0, 10))
+  const [tableMonth, setTableMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [tableYear, setTableYear] = useState(() => String(new Date().getFullYear()))
 
   const trucks = allTrucks ?? []
 
   const { data: records, isLoading } = useTruckWeighings(companyId, patente)
+
+  const tableRange = tablePeriodRange(granularity, tableDay, tableMonth, tableYear)
+  const { data: periodSummary, isLoading: periodSummaryLoading } = useTrucksPeriodSummary(
+    !patente ? companyId : null,
+    tableRange.from,
+    tableRange.to
+  )
 
   const years = useMemo(() => {
     const set = new Set((records ?? []).map((r) => r.fecha.split('-')[0]))
     set.add(String(new Date().getFullYear()))
     return [...set].sort((a, b) => Number(b) - Number(a))
   }, [records])
+
+  const tableYears = useMemo(() => {
+    const current = new Date().getFullYear()
+    return Array.from({ length: 6 }, (_, i) => String(current - i))
+  }, [])
 
   const buckets = useMemo(
     () => (records ? buildBuckets(records, granularity, month, year) : []),
@@ -158,6 +219,13 @@ export function TruckHistorySection(): React.JSX.Element {
       </div>
 
       <div className="flex flex-wrap items-end gap-4">
+        {patente && (
+          <Button variant="outline" size="sm" onClick={() => setPatente(null)}>
+            <ArrowLeft className="h-4 w-4" />
+            Volver a la tabla
+          </Button>
+        )}
+
         <div className="flex flex-col gap-1.5">
           <label className="text-sm text-muted">Patente</label>
           <Select value={patente ?? undefined} onValueChange={setPatente}>
@@ -188,7 +256,7 @@ export function TruckHistorySection(): React.JSX.Element {
           </Select>
         </div>
 
-        {granularity === 'diario' && (
+        {patente && granularity === 'diario' && (
           <div className="flex flex-col gap-1.5">
             <label className="text-sm text-muted">Mes</label>
             <Input
@@ -200,7 +268,7 @@ export function TruckHistorySection(): React.JSX.Element {
           </div>
         )}
 
-        {granularity === 'mensual' && (
+        {patente && granularity === 'mensual' && (
           <div className="flex flex-col gap-1.5">
             <label className="text-sm text-muted">Año</label>
             <Select value={year} onValueChange={setYear}>
@@ -209,6 +277,48 @@ export function TruckHistorySection(): React.JSX.Element {
               </SelectTrigger>
               <SelectContent>
                 {years.map((y) => (
+                  <SelectItem key={y} value={y}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {!patente && granularity === 'diario' && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm text-muted">Día</label>
+            <Input
+              type="date"
+              value={tableDay}
+              onChange={(e) => setTableDay(e.target.value)}
+              className="w-40"
+            />
+          </div>
+        )}
+
+        {!patente && granularity === 'mensual' && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm text-muted">Mes</label>
+            <Input
+              type="month"
+              value={tableMonth}
+              onChange={(e) => setTableMonth(e.target.value)}
+              className="w-40"
+            />
+          </div>
+        )}
+
+        {!patente && granularity === 'anual' && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm text-muted">Año</label>
+            <Select value={tableYear} onValueChange={setTableYear}>
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {tableYears.map((y) => (
                   <SelectItem key={y} value={y}>
                     {y}
                   </SelectItem>
@@ -227,8 +337,53 @@ export function TruckHistorySection(): React.JSX.Element {
       </div>
 
       {!patente ? (
-        <div className="flex h-64 items-center justify-center text-sm text-muted">
-          Selecciona una patente para ver su historial
+        <div className="overflow-hidden rounded-lg border border-line">
+          <table className="w-full text-sm">
+            <thead className="bg-surface text-left text-muted">
+              <tr>
+                <th className="px-4 py-2 font-medium">Patente</th>
+                <th className="px-4 py-2 text-right font-medium">Movimientos</th>
+                <th className="px-4 py-2 text-right font-medium">Peso (kg)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {periodSummaryLoading && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-6 text-center text-muted">
+                    Cargando…
+                  </td>
+                </tr>
+              )}
+              {!periodSummaryLoading && periodSummary?.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-6 text-center text-muted">
+                    Ningún camión registró pesajes en este período
+                  </td>
+                </tr>
+              )}
+              {periodSummary?.map((row) => {
+                const badge = transportistaBadge(
+                  transportistaNameById.get(row.transportistaId ?? '')
+                )
+                return (
+                  <tr
+                    key={row.patente}
+                    className="cursor-pointer text-ink hover:bg-page"
+                    onClick={() => setPatente(row.patente)}
+                  >
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        {row.patente}
+                        {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-right">{row.movimientos}</td>
+                    <td className="px-4 py-2 text-right">{row.peso.toLocaleString('es-CL')}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       ) : isLoading ? (
         <div className="flex h-64 items-center justify-center text-sm text-muted">Cargando…</div>
