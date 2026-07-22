@@ -43,7 +43,7 @@ export function TicketDocument({
           <span>
             <span className="font-semibold underline">Patente</span> {weighing.patente}
           </span>
-          <span>
+          <span className="text-[14.4px]">
             <span className="font-semibold underline">N° Guía de Despacho</span> {weighing.n_guia}
           </span>
         </div>
@@ -91,7 +91,7 @@ export function TicketDocument({
           <span>Peso Tara</span>
           <span>{formatKg(weighing.tara)} kg</span>
         </div>
-        <div className="flex justify-between font-bold">
+        <div className="flex justify-between text-[14.4px] font-bold">
           <span>Peso Neto</span>
           <span>{formatKg(weighing.carga)} kg</span>
         </div>

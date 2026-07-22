@@ -43,7 +43,7 @@ export function DailyEntryScreen(): React.JSX.Element {
   const transportistaNameById = new Map(transportistas?.map((t) => [t.id, t.nombre]))
 
   const pending = weighings?.filter((w) => w.carga === null) ?? []
-  const completed = weighings?.filter((w) => w.carga !== null) ?? []
+  const completed = (weighings?.filter((w) => w.carga !== null) ?? []).slice().reverse()
 
   useCameraAlerts(pending, openEdit)
 
