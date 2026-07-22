@@ -19,6 +19,16 @@ function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Pro
   return fetch(input, { ...init, signal })
 }
 
+// La ventana de impresión de tickets (/ticket-print) es un proceso de renderer
+// aparte que comparte el mismo localStorage (misma sesión) que la ventana
+// principal, pero se abre y cierra constantemente durante el día. Si ambas
+// ventanas refrescan el token en segundo plano, pueden chocar contra la misma
+// rotación de refresh token y una de las dos cierra la sesión de la otra
+// (ver supabase/auth-js#213). Solo la ventana principal debe encargarse del
+// refresco proactivo.
+const isTicketPrintWindow = window.location.hash.startsWith('#/ticket-print')
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  global: { fetch: fetchWithTimeout }
+  global: { fetch: fetchWithTimeout },
+  auth: { autoRefreshToken: !isTicketPrintWindow }
 })
