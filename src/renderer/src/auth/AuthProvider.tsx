@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         setOperator(data)
       } catch (err) {
         if (cancelled) return
+        console.error('loadOperator failed:', err)
         setAuthError(err instanceof Error ? err.message : 'sin conexión con el servidor')
       } finally {
         if (!cancelled) setLoading(false)

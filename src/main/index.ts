@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join } from 'path'
+import { join, dirname, basename } from 'path'
 import { writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -25,6 +25,14 @@ process.stderr.on('error', (err: NodeJS.ErrnoException) => {
 // Permite que la alerta sonora de detección por cámara (Fase 4) suene sin requerir
 // un gesto previo del usuario, ya que se dispara desde un evento de WebSocket, no un clic.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
+// El modo dev usa su propio perfil de Chromium, separado del de producción: evita que
+// pruebas locales corrompan o compartan datos con la instalación real, y aísla a cada
+// desarrollador de problemas de perfil (cache/IndexedDB dañados) de otras sesiones.
+if (is.dev) {
+  const defaultUserData = app.getPath('userData')
+  app.setPath('userData', join(dirname(defaultUserData), `${basename(defaultUserData)}-dev`))
+}
 
 interface SaveFileRequest {
   buffer: ArrayBuffer

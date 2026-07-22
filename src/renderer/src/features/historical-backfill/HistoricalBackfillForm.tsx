@@ -97,8 +97,9 @@ export function HistoricalBackfillForm({
 
           {hasDetailedData && (
             <p className="rounded-md bg-primary/10 px-3 py-2 text-xs text-primary">
-              Ya existe detalle diario cargado para este mes y empresa. El Resumen Mensual usará ese
-              detalle, no este total.
+              Ya existe detalle diario cargado para este mes y empresa. Este total se sumará al
+              detalle en el Resumen Mensual — usalo solo si corresponde a días no cubiertos por ese
+              detalle (ej. un mes de transición desde otro sistema).
             </p>
           )}
 

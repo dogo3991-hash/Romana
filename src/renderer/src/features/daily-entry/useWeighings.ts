@@ -62,10 +62,10 @@ export function useDailySummary(companyId: string | null, fecha: string) {
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function useMonthSummary(companyId: string | null, year: number, month: number) {
   return useQuery({
-    queryKey: ['monthly-summary-detailed', companyId, year, month],
+    queryKey: ['monthly-summary', companyId, year, month],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('v_monthly_summary_detailed')
+        .from('v_monthly_summary')
         .select('*')
         .eq('company_id', companyId!)
         .eq('year', year)
@@ -84,9 +84,6 @@ function useInvalidateWeighings(companyId: string | null, fecha: string): () => 
   return () => {
     queryClient.invalidateQueries({ queryKey: ['weighings', companyId, fecha] })
     queryClient.invalidateQueries({ queryKey: ['daily-summary', companyId, fecha] })
-    queryClient.invalidateQueries({
-      queryKey: ['monthly-summary-detailed', companyId, year, month]
-    })
     queryClient.invalidateQueries({ queryKey: ['monthly-summary'] })
     queryClient.invalidateQueries({ queryKey: ['daily-breakdown', companyId, year, month] })
   }
