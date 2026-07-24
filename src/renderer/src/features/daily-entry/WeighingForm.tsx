@@ -20,15 +20,12 @@ import {
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
 import { useTrucksByTransportista } from '@renderer/features/trucks/useTrucksAdmin'
 import { useTraslados } from '@renderer/features/trucks/useTraslados'
+import { useLastGuia } from './useWeighings'
 import type { Database } from '@renderer/types/database.types'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
 
 const PRODUCTOS = ['Min. Bellavista Open 1', 'Min. Bellavista Open 2', 'Gravilla', 'Otro']
-
-// Clave por empresa para recordar el último N° Guía ingresado y proponer el
-// siguiente correlativo al abrir un pesaje nuevo (ver DailyEntryScreen).
-export const LAST_GUIA_PREFIX = 'slm-bellavista:last-guia:'
 
 function nextGuia(last: string): string {
   const match = last.match(/^(.*?)(\d+)$/)
@@ -121,6 +118,7 @@ export function WeighingForm({
   })
 
   const { companyId } = useCompanyContext()
+  const { refetch: refetchLastGuia } = useLastGuia(companyId)
 
   // Solo re-sincroniza el formulario cuando el dialog se abre o cambia el registro
   // a editar — nunca en cada render, para no pisar lo que el usuario va tipeando.
@@ -142,12 +140,15 @@ export function WeighingForm({
         traslado: editing.traslado ?? ''
       })
     } else {
-      // Propone el correlativo siguiente al último N° Guía guardado para esta
-      // empresa, pero el campo sigue siendo editable por si no corresponde.
-      const lastGuia = companyId ? localStorage.getItem(LAST_GUIA_PREFIX + companyId) : null
-      reset({ ...emptyValues(), n_guia: lastGuia ? nextGuia(lastGuia) : '' })
+      reset(emptyValues())
+      // Trae de Supabase (no de una caché local) el último N° Guía guardado
+      // por cualquier PC, y propone el correlativo siguiente — el campo
+      // sigue siendo editable por si no corresponde.
+      refetchLastGuia().then(({ data }) => {
+        if (data) setValue('n_guia', nextGuia(data))
+      })
     }
-  }, [open, editing, reset, companyId])
+  }, [open, editing, reset, setValue, refetchLastGuia])
   const { data: transportistas } = useTransportistas()
   const transportistaId = watch('transportista_id')
   const { data: conductors } = useConductorsByTransportista(transportistaId || null)

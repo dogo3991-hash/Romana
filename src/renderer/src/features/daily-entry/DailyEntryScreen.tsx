@@ -14,7 +14,7 @@ import {
   useMonthSummary,
   useUpdateWeighing
 } from './useWeighings'
-import { LAST_GUIA_PREFIX, WeighingForm, type WeighingFormValues } from './WeighingForm'
+import { WeighingForm, type WeighingFormValues } from './WeighingForm'
 import { WeighingTicket } from './WeighingTicket'
 import { ConfirmDialog } from '@renderer/components/ui/confirm-dialog'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
@@ -94,11 +94,6 @@ export function DailyEntryScreen(): React.JSX.Element {
         fecha,
         ...payload
       })
-    }
-    // Recuerda el último N° Guía guardado para proponer el siguiente
-    // correlativo la próxima vez que se abra "Agregar pesaje".
-    if (companyId) {
-      localStorage.setItem(LAST_GUIA_PREFIX + companyId, values.n_guia)
     }
     setFormOpen(false)
   }
