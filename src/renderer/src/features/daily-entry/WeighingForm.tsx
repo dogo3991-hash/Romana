@@ -26,6 +26,18 @@ type Weighing = Database['public']['Tables']['weighings']['Row']
 
 const PRODUCTOS = ['Min. Bellavista Open 1', 'Min. Bellavista Open 2', 'Gravilla', 'Otro']
 
+// Clave por empresa para recordar el último N° Guía ingresado y proponer el
+// siguiente correlativo al abrir un pesaje nuevo (ver DailyEntryScreen).
+export const LAST_GUIA_PREFIX = 'slm-bellavista:last-guia:'
+
+function nextGuia(last: string): string {
+  const match = last.match(/^(.*?)(\d+)$/)
+  if (!match) return ''
+  const [, prefix, digits] = match
+  const incremented = (BigInt(digits) + 1n).toString().padStart(digits.length, '0')
+  return prefix + incremented
+}
+
 const schema = z
   .object({
     // Hora de entrada: cuando se registra el camión (etapa 1).
@@ -108,6 +120,8 @@ export function WeighingForm({
     defaultValues: emptyValues()
   })
 
+  const { companyId } = useCompanyContext()
+
   // Solo re-sincroniza el formulario cuando el dialog se abre o cambia el registro
   // a editar — nunca en cada render, para no pisar lo que el usuario va tipeando.
   useEffect(() => {
@@ -128,11 +142,12 @@ export function WeighingForm({
         traslado: editing.traslado ?? ''
       })
     } else {
-      reset(emptyValues())
+      // Propone el correlativo siguiente al último N° Guía guardado para esta
+      // empresa, pero el campo sigue siendo editable por si no corresponde.
+      const lastGuia = companyId ? localStorage.getItem(LAST_GUIA_PREFIX + companyId) : null
+      reset({ ...emptyValues(), n_guia: lastGuia ? nextGuia(lastGuia) : '' })
     }
-  }, [open, editing, reset])
-
-  const { companyId } = useCompanyContext()
+  }, [open, editing, reset, companyId])
   const { data: transportistas } = useTransportistas()
   const transportistaId = watch('transportista_id')
   const { data: conductors } = useConductorsByTransportista(transportistaId || null)
