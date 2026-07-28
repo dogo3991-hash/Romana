@@ -25,6 +25,43 @@ async function saveWorkbook(workbook: Workbook, defaultName: string): Promise<bo
   return !result.canceled
 }
 
+interface PatenteTotals {
+  viajes: number
+  kg: number
+}
+
+function buildTransportistaSummary(
+  rows: Weighing[],
+  transportistaNameById: Map<string, string>
+): Map<string, Map<string, PatenteTotals>> {
+  const summary = new Map<string, Map<string, PatenteTotals>>()
+
+  for (const w of rows) {
+    const transportistaName = w.transportista_id
+      ? (transportistaNameById.get(w.transportista_id) ?? 'Sin transportista')
+      : 'Sin transportista'
+    const patente = w.patente ?? 'Sin patente'
+
+    if (!summary.has(transportistaName)) {
+      summary.set(transportistaName, new Map())
+    }
+    const patentes = summary.get(transportistaName)!
+    const totals = patentes.get(patente) ?? { viajes: 0, kg: 0 }
+    totals.viajes += 1
+    totals.kg += w.carga ?? 0
+    patentes.set(patente, totals)
+  }
+
+  return new Map(
+    [...summary.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([transportista, patentes]) => [
+        transportista,
+        new Map([...patentes.entries()].sort(([a], [b]) => a.localeCompare(b)))
+      ])
+  )
+}
+
 export async function exportWeighingsReport(
   rows: Weighing[],
   companyName: string,
@@ -73,6 +110,74 @@ export async function exportWeighingsReport(
       traslado: w.traslado
     })
   }
+
+  const summary = buildTransportistaSummary(rows, transportistaNameById)
+
+  // Columnas E–H: la tabla resumen se despliega a la derecha del detalle, no debajo de la columna A.
+  const SUMMARY_COL_START = 5
+  const SUMMARY_COL_END = 8
+
+  let rowNum = (sheet.lastRow?.number ?? 1) + 2
+
+  const titleRow = sheet.getRow(rowNum)
+  titleRow.getCell(SUMMARY_COL_START).value = 'RESUMEN POR TRANSPORTISTA'
+  sheet.mergeCells(rowNum, SUMMARY_COL_START, rowNum, SUMMARY_COL_END)
+  titleRow.getCell(SUMMARY_COL_START).font = { bold: true, size: 12 }
+  titleRow.getCell(SUMMARY_COL_START).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFBDD7EE' }
+  }
+  rowNum++
+
+  const headerRow = sheet.getRow(rowNum)
+  const headerLabels = ['Transportista', 'Patente', 'N° Viajes', 'Kg Totales']
+  headerLabels.forEach((label, i) => {
+    const cell = headerRow.getCell(SUMMARY_COL_START + i)
+    cell.value = label
+    cell.font = { bold: true }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } }
+  })
+  rowNum++
+
+  let totalViajes = 0
+  let totalKg = 0
+
+  for (const [transportista, patentes] of summary) {
+    const transportistaViajes = [...patentes.values()].reduce((sum, p) => sum + p.viajes, 0)
+    const transportistaKg = [...patentes.values()].reduce((sum, p) => sum + p.kg, 0)
+
+    const transportistaRow = sheet.getRow(rowNum)
+    ;[transportista, '', transportistaViajes, transportistaKg].forEach((value, i) => {
+      const cell = transportistaRow.getCell(SUMMARY_COL_START + i)
+      cell.value = value
+      cell.font = { bold: true }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } }
+    })
+    transportistaRow.getCell(SUMMARY_COL_START + 3).numFmt = '#,##0'
+    rowNum++
+
+    for (const [patente, totals] of patentes) {
+      const patenteRow = sheet.getRow(rowNum)
+      ;['', patente, totals.viajes, totals.kg].forEach((value, i) => {
+        patenteRow.getCell(SUMMARY_COL_START + i).value = value
+      })
+      patenteRow.getCell(SUMMARY_COL_START + 3).numFmt = '#,##0'
+      rowNum++
+    }
+
+    totalViajes += transportistaViajes
+    totalKg += transportistaKg
+  }
+
+  const totalRow = sheet.getRow(rowNum)
+  ;['TOTAL GENERAL', '', totalViajes, totalKg].forEach((value, i) => {
+    const cell = totalRow.getCell(SUMMARY_COL_START + i)
+    cell.value = value
+    cell.font = { bold: true }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA9D08E' } }
+  })
+  totalRow.getCell(SUMMARY_COL_START + 3).numFmt = '#,##0'
 
   const defaultName = `Pesajes ${companyName} ${from} a ${to}.xlsx`
   return saveWorkbook(workbook, defaultName)
