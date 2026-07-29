@@ -80,6 +80,26 @@ function nowHHMM(): string {
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
+// Recuerda el último traslado elegido (por empresa) para que el próximo
+// pesaje nuevo lo proponga por defecto y no haya que volver a seleccionarlo.
+function getLastTraslado(companyId: string | null): string {
+  if (!companyId) return ''
+  try {
+    return localStorage.getItem(`lastTraslado:${companyId}`) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function setLastTraslado(companyId: string | null, traslado: string): void {
+  if (!companyId || !traslado) return
+  try {
+    localStorage.setItem(`lastTraslado:${companyId}`, traslado)
+  } catch {
+    // localStorage no disponible — no es crítico, se pedirá de nuevo
+  }
+}
+
 function emptyValues(): WeighingFormInput {
   return {
     hora_entrada: nowHHMM(),
@@ -118,7 +138,7 @@ export function WeighingForm({
   })
 
   const { companyId } = useCompanyContext()
-  const { refetch: refetchLastGuia } = useLastGuia(companyId)
+  const { refetch: refetchLastGuia } = useLastGuia()
 
   // Solo re-sincroniza el formulario cuando el dialog se abre o cambia el registro
   // a editar — nunca en cada render, para no pisar lo que el usuario va tipeando.
@@ -140,7 +160,7 @@ export function WeighingForm({
         traslado: editing.traslado ?? ''
       })
     } else {
-      reset(emptyValues())
+      reset({ ...emptyValues(), traslado: getLastTraslado(companyId) })
       // Trae de Supabase (no de una caché local) el último N° Guía guardado
       // por cualquier PC, y propone el correlativo siguiente — el campo
       // sigue siendo editable por si no corresponde.
@@ -148,7 +168,7 @@ export function WeighingForm({
         if (data) setValue('n_guia', nextGuia(data))
       })
     }
-  }, [open, editing, reset, setValue, refetchLastGuia])
+  }, [open, editing, reset, setValue, refetchLastGuia, companyId])
   const { data: transportistas } = useTransportistas()
   const transportistaId = watch('transportista_id')
   const { data: conductors } = useConductorsByTransportista(transportistaId || null)
@@ -177,6 +197,7 @@ export function WeighingForm({
 
   async function submit(values: WeighingFormValues): Promise<void> {
     await onSubmit(values)
+    setLastTraslado(companyId, values.traslado ?? '')
   }
 
   return (

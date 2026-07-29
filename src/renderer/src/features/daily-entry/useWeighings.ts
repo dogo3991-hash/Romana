@@ -59,25 +59,24 @@ export function useDailySummary(companyId: string | null, fecha: string) {
   })
 }
 
-// Último N° Guía guardado para esta empresa (sin importar fecha ni qué PC lo
-// creó) — se usa para proponer el correlativo siguiente al abrir un pesaje
-// nuevo. staleTime: 0 fuerza traer el dato más fresco cada vez que se refetchea.
+// Último N° Guía guardado (sin importar empresa, fecha ni qué PC lo creó —
+// el talonario de guías es uno solo, compartido entre empresas) — se usa
+// para proponer el correlativo siguiente al abrir un pesaje nuevo.
+// staleTime: 0 fuerza traer el dato más fresco cada vez que se refetchea.
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function useLastGuia(companyId: string | null) {
+export function useLastGuia() {
   return useQuery({
-    queryKey: ['last-guia', companyId],
+    queryKey: ['last-guia'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('weighings')
         .select('n_guia')
-        .eq('company_id', companyId!)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
       if (error) throw error
       return data?.n_guia ?? null
     },
-    enabled: !!companyId,
     staleTime: 0
   })
 }
