@@ -18,6 +18,8 @@ interface CreateOperatorInput {
   password: string
   full_name: string
   is_admin: boolean
+  is_viewer: boolean
+  restricted_company_id: string | null
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -43,7 +45,12 @@ export function useUpdateOperator() {
       values
     }: {
       id: string
-      values: { is_admin?: boolean; active?: boolean }
+      values: {
+        is_admin?: boolean
+        active?: boolean
+        is_viewer?: boolean
+        restricted_company_id?: string | null
+      }
     }) => {
       const { error } = await supabase.from('operators').update(values).eq('id', id)
       if (error) throw error

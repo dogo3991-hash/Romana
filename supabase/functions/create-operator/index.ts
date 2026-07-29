@@ -15,6 +15,8 @@ interface CreateOperatorPayload {
   password: string
   full_name: string
   is_admin?: boolean
+  is_viewer?: boolean
+  restricted_company_id?: string | null
 }
 
 Deno.serve(async (req) => {
@@ -63,6 +65,12 @@ Deno.serve(async (req) => {
     if (payload.password.length < 8) {
       return jsonResponse({ error: 'La contraseña debe tener al menos 8 caracteres' }, 400)
     }
+    if (payload.is_admin && payload.is_viewer) {
+      return jsonResponse({ error: 'Un operador no puede ser admin y expectador a la vez' }, 400)
+    }
+    if (payload.is_viewer && !payload.restricted_company_id) {
+      return jsonResponse({ error: 'Un expectador debe quedar restringido a una empresa' }, 400)
+    }
 
     // Cliente con la service_role key, solo para la creación del usuario
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
@@ -79,11 +87,16 @@ Deno.serve(async (req) => {
     }
 
     // El trigger on_auth_user_created ya insertó la fila en operators.
-    // Si se pidió is_admin, la actualizamos (por defecto se crea como no-admin).
-    if (payload.is_admin) {
+    // Si se pidió is_admin o is_viewer, la actualizamos (por defecto se crea
+    // como operador regular, sin ninguno de los dos).
+    if (payload.is_admin || payload.is_viewer) {
       const { error: updateError } = await adminClient
         .from('operators')
-        .update({ is_admin: true })
+        .update({
+          is_admin: !!payload.is_admin,
+          is_viewer: !!payload.is_viewer,
+          restricted_company_id: payload.is_viewer ? payload.restricted_company_id : null
+        })
         .eq('id', created.user.id)
 
       if (updateError) {

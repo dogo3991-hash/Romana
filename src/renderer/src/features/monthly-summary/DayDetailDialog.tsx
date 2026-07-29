@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog'
 import { Button } from '@renderer/components/ui/button'
+import { useAuth } from '@renderer/auth/AuthProvider'
 import { DeleteWithPasswordDialog } from './DeleteWithPasswordDialog'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
 import {
@@ -25,6 +26,8 @@ export function DayDetailDialog({
   fecha,
   onOpenChange
 }: DayDetailDialogProps): React.JSX.Element {
+  const { operator } = useAuth()
+  const isViewer = !!operator?.is_viewer
   const [editing, setEditing] = useState<Weighing | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -133,14 +136,20 @@ export function DayDetailDialog({
                     </td>
                     <td className="px-4 py-2 text-muted">{w.traslado}</td>
                     <td className="px-4 py-2">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {!isViewer && (
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteTarget(w.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

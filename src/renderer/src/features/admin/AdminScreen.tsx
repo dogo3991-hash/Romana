@@ -93,6 +93,8 @@ function CompaniesSection(): React.JSX.Element {
 
 function OperatorsSection(): React.JSX.Element {
   const { data: operators, isLoading } = useAllOperators()
+  const { data: companies } = useAllCompanies()
+  const companyNameById = new Map(companies?.map((c) => [c.id, c.name]))
   const createMutation = useCreateOperator()
   const updateMutation = useUpdateOperator()
   const [formOpen, setFormOpen] = useState(false)
@@ -144,9 +146,16 @@ function OperatorsSection(): React.JSX.Element {
                 <td className="px-4 py-2">{o.full_name}</td>
                 <td className="px-4 py-2 text-muted">{o.email}</td>
                 <td className="px-4 py-2">
-                  <Badge variant={o.is_admin ? 'default' : 'muted'}>
-                    {o.is_admin ? 'Administrador' : 'Operador'}
-                  </Badge>
+                  <div className="flex flex-col gap-1">
+                    <Badge variant={o.is_admin ? 'default' : o.is_viewer ? 'muted' : 'muted'}>
+                      {o.is_admin ? 'Administrador' : o.is_viewer ? 'Expectador' : 'Operador'}
+                    </Badge>
+                    {o.is_viewer && o.restricted_company_id && (
+                      <span className="text-xs text-muted">
+                        {companyNameById.get(o.restricted_company_id) ?? '—'}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-2">
                   <Badge variant={o.active ? 'success' : 'muted'}>
@@ -159,7 +168,14 @@ function OperatorsSection(): React.JSX.Element {
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        updateMutation.mutate({ id: o.id, values: { is_admin: !o.is_admin } })
+                        updateMutation.mutate({
+                          id: o.id,
+                          // Un admin nunca queda restringido a una empresa (constraint
+                          // operators_role_exclusive), así que al promover se limpia is_viewer.
+                          values: o.is_admin
+                            ? { is_admin: false }
+                            : { is_admin: true, is_viewer: false, restricted_company_id: null }
+                        })
                       }
                     >
                       {o.is_admin ? 'Quitar admin' : 'Hacer admin'}

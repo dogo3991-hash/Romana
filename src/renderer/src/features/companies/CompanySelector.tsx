@@ -1,3 +1,4 @@
+import { useAuth } from '@renderer/auth/AuthProvider'
 import { useCompanyContext } from './CompanyContext'
 import {
   Select,
@@ -9,6 +10,7 @@ import {
 
 export function CompanySelector(): React.JSX.Element {
   const { companyId, setCompanyId, companies, loading } = useCompanyContext()
+  const { operator } = useAuth()
 
   if (loading) {
     return <div className="h-10 w-56 animate-pulse rounded-md bg-line/40" />
@@ -16,6 +18,13 @@ export function CompanySelector(): React.JSX.Element {
 
   if (companies.length === 0) {
     return <span className="text-sm text-muted">Sin empresas cargadas</span>
+  }
+
+  // El expectador queda restringido a una sola empresa (RLS ya solo le
+  // devuelve esa fila) — se muestra fijo, sin dropdown para cambiarla.
+  if (operator?.is_viewer) {
+    const name = companies.find((c) => c.id === companyId)?.name ?? '—'
+    return <span className="flex h-10 w-56 items-center text-sm text-ink">{name}</span>
   }
 
   return (

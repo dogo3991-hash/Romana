@@ -5,15 +5,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@renderer/comp
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { Label } from '@renderer/components/ui/label'
+import { useAllCompanies } from './useCompaniesAdmin'
 
-const schema = z.object({
-  full_name: z.string().min(1, 'Requerido'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(8, 'Mínimo 8 caracteres'),
-  is_admin: z.boolean()
-})
+const schema = z
+  .object({
+    full_name: z.string().min(1, 'Requerido'),
+    email: z.string().email('Email inválido'),
+    password: z.string().min(8, 'Mínimo 8 caracteres'),
+    role: z.enum(['operator', 'admin', 'viewer']),
+    restricted_company_id: z.string().optional()
+  })
+  .refine((data) => data.role !== 'viewer' || !!data.restricted_company_id, {
+    message: 'Selecciona la empresa a la que queda restringido',
+    path: ['restricted_company_id']
+  })
 
-export type OperatorFormValues = z.infer<typeof schema>
+type OperatorFormInput = z.infer<typeof schema>
+
+export interface OperatorFormValues {
+  full_name: string
+  email: string
+  password: string
+  is_admin: boolean
+  is_viewer: boolean
+  restricted_company_id: string | null
+}
 
 interface OperatorFormProps {
   open: boolean
@@ -32,14 +48,25 @@ export function OperatorForm({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors }
-  } = useForm<OperatorFormValues>({
+  } = useForm<OperatorFormInput>({
     resolver: zodResolver(schema),
-    defaultValues: { full_name: '', email: '', password: '', is_admin: false }
+    defaultValues: { full_name: '', email: '', password: '', role: 'operator' }
   })
 
-  async function submit(values: OperatorFormValues): Promise<void> {
-    await onSubmit(values)
+  const { data: companies } = useAllCompanies()
+  const role = watch('role')
+
+  async function submit(values: OperatorFormInput): Promise<void> {
+    await onSubmit({
+      full_name: values.full_name,
+      email: values.email,
+      password: values.password,
+      is_admin: values.role === 'admin',
+      is_viewer: values.role === 'viewer',
+      restricted_company_id: values.role === 'viewer' ? (values.restricted_company_id ?? null) : null
+    })
     reset()
   }
 
@@ -69,10 +96,43 @@ export function OperatorForm({
             {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-muted">
-            <input type="checkbox" className="h-4 w-4" {...register('is_admin')} />
-            Es administrador
-          </label>
+          <div className="flex flex-col gap-1.5">
+            <Label>Rol</Label>
+            <div className="flex flex-col gap-2 text-sm text-muted">
+              <label className="flex items-center gap-2">
+                <input type="radio" value="operator" {...register('role')} />
+                Operador (registra y edita pesajes normalmente)
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="radio" value="admin" {...register('role')} />
+                Administrador
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="radio" value="viewer" {...register('role')} />
+                Expectador (solo ver datos y descargar informes, sin editar)
+              </label>
+            </div>
+          </div>
+
+          {role === 'viewer' && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Empresa a la que queda restringido</Label>
+              <select
+                className="h-10 rounded-md border border-line bg-surface px-3 text-sm"
+                {...register('restricted_company_id')}
+              >
+                <option value="">Seleccionar</option>
+                {companies?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {errors.restricted_company_id && (
+                <p className="text-xs text-danger">{errors.restricted_company_id.message}</p>
+              )}
+            </div>
+          )}
 
           <div className="mt-2 flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

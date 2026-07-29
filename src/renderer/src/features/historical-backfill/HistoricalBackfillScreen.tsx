@@ -33,6 +33,7 @@ const MONTH_NAMES = [
 export function HistoricalBackfillScreen(): React.JSX.Element {
   const { companyId, loading: companyLoading } = useCompanyContext()
   const { operator } = useAuth()
+  const isViewer = !!operator?.is_viewer
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<HistoricalTotal | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -88,10 +89,12 @@ export function HistoricalBackfillScreen(): React.JSX.Element {
           <label className="text-sm font-medium text-muted">Empresa</label>
           <CompanySelector />
         </div>
-        <Button onClick={openNew}>
-          <Plus className="h-4 w-4" />
-          Cargar total mensual
-        </Button>
+        {!isViewer && (
+          <Button onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            Cargar total mensual
+          </Button>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-lg border border-line">
@@ -129,14 +132,16 @@ export function HistoricalBackfillScreen(): React.JSX.Element {
                 <td className="px-4 py-2 text-right">{t.total_carga.toLocaleString('es-CL')}</td>
                 <td className="px-4 py-2 text-muted">{t.notes}</td>
                 <td className="px-4 py-2">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

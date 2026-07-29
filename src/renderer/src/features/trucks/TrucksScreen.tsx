@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
 import { CompanySelector } from '@renderer/features/companies/CompanySelector'
+import { useAuth } from '@renderer/auth/AuthProvider'
 import { Button } from '@renderer/components/ui/button'
 import { useAllTrucks, useCreateTruck, useDeleteTruck, useUpdateTruck } from './useTrucksAdmin'
 import { TruckForm, type TruckFormValues } from './TruckForm'
@@ -28,6 +29,8 @@ export function TrucksScreen(): React.JSX.Element {
 }
 
 function TrucksSection(): React.JSX.Element {
+  const { operator } = useAuth()
+  const isViewer = !!operator?.is_viewer
   const { data: trucks, isLoading } = useAllTrucks()
   const createMutation = useCreateTruck()
   const updateMutation = useUpdateTruck()
@@ -64,10 +67,12 @@ function TrucksSection(): React.JSX.Element {
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-ink">Camiones</h2>
-        <Button onClick={openNew}>
-          <Plus className="h-4 w-4" />
-          Agregar camión
-        </Button>
+        {!isViewer && (
+          <Button onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            Agregar camión
+          </Button>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-lg border border-line">
@@ -103,14 +108,16 @@ function TrucksSection(): React.JSX.Element {
                   {t.transportistas?.nombre ?? <span className="text-danger">Sin asignar</span>}
                 </td>
                 <td className="px-4 py-2">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -138,6 +145,8 @@ function TrucksSection(): React.JSX.Element {
 }
 
 function TrasladosSection(): React.JSX.Element {
+  const { operator } = useAuth()
+  const isViewer = !!operator?.is_viewer
   const { companyId } = useCompanyContext()
   const { data: traslados, isLoading } = useTraslados(companyId)
   const createMutation = useCreateTraslado(companyId)
@@ -175,10 +184,12 @@ function TrasladosSection(): React.JSX.Element {
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-ink">Traslados</h2>
-        <Button onClick={openNew} disabled={!companyId}>
-          <Plus className="h-4 w-4" />
-          Agregar traslado
-        </Button>
+        {!isViewer && (
+          <Button onClick={openNew} disabled={!companyId}>
+            <Plus className="h-4 w-4" />
+            Agregar traslado
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -213,14 +224,16 @@ function TrasladosSection(): React.JSX.Element {
               <tr key={t.id} className="text-ink">
                 <td className="px-4 py-2">{t.nombre}</td>
                 <td className="px-4 py-2">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

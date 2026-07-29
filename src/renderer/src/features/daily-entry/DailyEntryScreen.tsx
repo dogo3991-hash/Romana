@@ -28,6 +28,7 @@ type Weighing = Database['public']['Tables']['weighings']['Row']
 export function DailyEntryScreen(): React.JSX.Element {
   const { companyId, loading: companyLoading } = useCompanyContext()
   const { operator } = useAuth()
+  const isViewer = !!operator?.is_viewer
   const [fecha, setFecha] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Weighing | null>(null)
@@ -138,10 +139,12 @@ export function DailyEntryScreen(): React.JSX.Element {
             />
           </div>
         </div>
-        <Button onClick={openNew}>
-          <Plus className="h-4 w-4" />
-          Agregar pesaje
-        </Button>
+        {!isViewer && (
+          <Button onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            Agregar pesaje
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-4">
@@ -200,19 +203,25 @@ export function DailyEntryScreen(): React.JSX.Element {
                         {w.tara?.toLocaleString('es-CL') ?? '—'}
                       </td>
                       <td className="px-4 py-2">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Agregar peso bruto"
-                            onClick={() => openEdit(w)}
-                          >
-                            <img src={pesajeIcon} className="h-4 w-4" alt="Agregar peso bruto" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {!isViewer && (
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Agregar peso bruto"
+                              onClick={() => openEdit(w)}
+                            >
+                              <img src={pesajeIcon} className="h-4 w-4" alt="Agregar peso bruto" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeleteTarget(w.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -274,17 +283,19 @@ export function DailyEntryScreen(): React.JSX.Element {
                   </td>
                   <td className="px-4 py-2 text-muted">{w.traslado}</td>
                   <td className="px-4 py-2">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openTicket(w)}>
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {!isViewer && (
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openTicket(w)}>
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

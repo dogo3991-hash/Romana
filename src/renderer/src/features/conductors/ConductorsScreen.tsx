@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useAuth } from '@renderer/auth/AuthProvider'
 import { Button } from '@renderer/components/ui/button'
 import {
   useAllConductors,
@@ -28,6 +29,8 @@ export function ConductorsScreen(): React.JSX.Element {
 }
 
 function TransportistasSection(): React.JSX.Element {
+  const { operator } = useAuth()
+  const isViewer = !!operator?.is_viewer
   const { data: transportistas, isLoading } = useTransportistas()
   const createMutation = useCreateTransportista()
   const updateMutation = useUpdateTransportista()
@@ -64,10 +67,12 @@ function TransportistasSection(): React.JSX.Element {
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-ink">Transportistas</h2>
-        <Button onClick={openNew}>
-          <Plus className="h-4 w-4" />
-          Agregar
-        </Button>
+        {!isViewer && (
+          <Button onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            Agregar
+          </Button>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-lg border border-line">
@@ -99,14 +104,16 @@ function TransportistasSection(): React.JSX.Element {
                 <td className="px-4 py-2">{t.nombre}</td>
                 <td className="px-4 py-2 text-muted">{t.rut}</td>
                 <td className="px-4 py-2">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -134,6 +141,8 @@ function TransportistasSection(): React.JSX.Element {
 }
 
 function ConductorsSection(): React.JSX.Element {
+  const { operator } = useAuth()
+  const isViewer = !!operator?.is_viewer
   const { data: conductors, isLoading } = useAllConductors()
   const createMutation = useCreateConductor()
   const updateMutation = useUpdateConductor()
@@ -180,10 +189,12 @@ function ConductorsSection(): React.JSX.Element {
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-ink">Conductores</h2>
-        <Button onClick={openNew}>
-          <Plus className="h-4 w-4" />
-          Agregar
-        </Button>
+        {!isViewer && (
+          <Button onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            Agregar
+          </Button>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-lg border border-line">
@@ -217,25 +228,27 @@ function ConductorsSection(): React.JSX.Element {
                 <td className="px-4 py-2 text-muted">{c.rut}</td>
                 <td className="px-4 py-2">{c.transportistas?.nombre}</td>
                 <td className="px-4 py-2">
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        openEdit({
-                          id: c.id,
-                          nombre: c.nombre,
-                          rut: c.rut,
-                          transportista_id: c.transportista_id
-                        })
-                      }
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(c.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          openEdit({
+                            id: c.id,
+                            nombre: c.nombre,
+                            rut: c.rut,
+                            transportista_id: c.transportista_id
+                          })
+                        }
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(c.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

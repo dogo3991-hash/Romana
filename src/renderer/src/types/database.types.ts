@@ -123,6 +123,8 @@ export type Database = {
           full_name: string
           id: string
           is_admin: boolean
+          is_viewer: boolean
+          restricted_company_id: string | null
         }
         Insert: {
           active?: boolean
@@ -131,6 +133,8 @@ export type Database = {
           full_name: string
           id: string
           is_admin?: boolean
+          is_viewer?: boolean
+          restricted_company_id?: string | null
         }
         Update: {
           active?: boolean
@@ -139,8 +143,18 @@ export type Database = {
           full_name?: string
           id?: string
           is_admin?: boolean
+          is_viewer?: boolean
+          restricted_company_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'operators_restricted_company_id_fkey'
+            columns: ['restricted_company_id']
+            isOneToOne: false
+            referencedRelation: 'companies'
+            referencedColumns: ['id']
+          }
+        ]
       }
       transportistas: {
         Row: {

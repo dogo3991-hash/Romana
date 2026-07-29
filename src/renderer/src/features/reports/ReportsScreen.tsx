@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { FileSpreadsheet } from 'lucide-react'
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
 import { CompanySelector } from '@renderer/features/companies/CompanySelector'
+import { useAuth } from '@renderer/auth/AuthProvider'
 import { useHistoricalTotals } from '@renderer/features/historical-backfill/useHistoricalTotals'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
 import { Button } from '@renderer/components/ui/button'
@@ -13,6 +14,8 @@ import { TruckHistorySection } from './TruckHistorySection'
 
 export function ReportsScreen(): React.JSX.Element {
   const { companyId, companies, loading: companyLoading } = useCompanyContext()
+  const { operator } = useAuth()
+  const isViewer = !!operator?.is_viewer
   const [from, setFrom] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [to, setTo] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [exportingDetail, setExportingDetail] = useState(false)
@@ -113,20 +116,22 @@ export function ReportsScreen(): React.JSX.Element {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4 rounded-lg border border-line p-5">
-        <div>
-          <h2 className="text-base font-semibold text-ink">Histórico Mensual</h2>
-          <p className="text-sm text-muted">
-            Totales mensuales cargados a mano en Carga Histórica.
-          </p>
-        </div>
-        <Button onClick={handleExportHistorical} disabled={exportingHistorical}>
-          <FileSpreadsheet className="h-4 w-4" />
-          {exportingHistorical ? 'Generando...' : 'Exportar a Excel'}
-        </Button>
-      </section>
+      {!isViewer && (
+        <section className="flex flex-col gap-4 rounded-lg border border-line p-5">
+          <div>
+            <h2 className="text-base font-semibold text-ink">Histórico Mensual</h2>
+            <p className="text-sm text-muted">
+              Totales mensuales cargados a mano en Carga Histórica.
+            </p>
+          </div>
+          <Button onClick={handleExportHistorical} disabled={exportingHistorical}>
+            <FileSpreadsheet className="h-4 w-4" />
+            {exportingHistorical ? 'Generando...' : 'Exportar a Excel'}
+          </Button>
+        </section>
+      )}
 
-      <TruckHistorySection />
+      {!isViewer && <TruckHistorySection />}
     </div>
   )
 }
