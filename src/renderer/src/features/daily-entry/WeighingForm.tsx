@@ -73,6 +73,10 @@ interface WeighingFormProps {
   // agregar un pesaje nuevo para no crear un duplicado del mismo camión.
   pendingConductors: string[]
   pendingPatentes: string[]
+  // true = editar solo los datos de un pesaje "en espera" (corregir un error
+  // de tipeo); mantiene peso_bruto/hora_salida bloqueados y no propone hora
+  // de salida, para no invitar a completar el pesaje desde este modo.
+  lockWeight?: boolean
 }
 
 function nowHHMM(): string {
@@ -122,7 +126,8 @@ export function WeighingForm({
   editing,
   submitting,
   pendingConductors,
-  pendingPatentes
+  pendingPatentes,
+  lockWeight = false
 }: WeighingFormProps): React.JSX.Element {
   const {
     register,
@@ -149,7 +154,9 @@ export function WeighingForm({
         hora_entrada: editing.hora_entrada.slice(0, 5),
         // Al completar un pesaje en espera todavía no tiene hora de salida
         // guardada — se propone la hora actual, editable.
-        hora_salida: editing.hora_salida?.slice(0, 5) ?? (editing.carga === null ? nowHHMM() : ''),
+        hora_salida:
+          editing.hora_salida?.slice(0, 5) ??
+          (editing.carga === null && !lockWeight ? nowHHMM() : ''),
         transportista_id: editing.transportista_id ?? '',
         conductor: editing.conductor,
         patente: editing.patente,
@@ -168,7 +175,7 @@ export function WeighingForm({
         if (data) setValue('n_guia', nextGuia(data))
       })
     }
-  }, [open, editing, reset, setValue, refetchLastGuia, companyId])
+  }, [open, editing, reset, setValue, refetchLastGuia, companyId, lockWeight])
   const { data: transportistas } = useTransportistas()
   const transportistaId = watch('transportista_id')
   const { data: conductors } = useConductorsByTransportista(transportistaId || null)
@@ -207,9 +214,11 @@ export function WeighingForm({
           <DialogTitle>
             {!editing
               ? 'Nuevo pesaje (en espera)'
-              : editing.carga === null
-                ? 'Completar pesaje'
-                : 'Editar pesaje'}
+              : lockWeight
+                ? 'Editar datos (en espera)'
+                : editing.carga === null
+                  ? 'Completar pesaje'
+                  : 'Editar pesaje'}
           </DialogTitle>
         </DialogHeader>
 
@@ -347,20 +356,22 @@ export function WeighingForm({
               type="number"
               step="1"
               min="1"
-              disabled={!editing}
+              disabled={!editing || lockWeight}
               {...register('peso_bruto')}
               className="h-14 border-2 border-primary bg-primary/5 text-xl font-semibold text-ink disabled:bg-page disabled:text-muted"
             />
-            {!editing && (
+            {(!editing || lockWeight) && (
               <p className="text-xs text-muted">
-                Se completa después, cuando el camión pase por la báscula.
+                {lockWeight
+                  ? 'Para registrar el peso, usa "Agregar peso bruto".'
+                  : 'Se completa después, cuando el camión pase por la báscula.'}
               </p>
             )}
           </Field>
 
           <div className="grid grid-cols-3 gap-4">
             <Field label="Hora Salida" error={errors.hora_salida?.message}>
-              <Input type="time" disabled={!editing} {...register('hora_salida')} />
+              <Input type="time" disabled={!editing || lockWeight} {...register('hora_salida')} />
             </Field>
             <Field label="Tara (kg)" error={errors.tara?.message}>
               <Input type="number" {...register('tara')} disabled />

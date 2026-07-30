@@ -32,6 +32,7 @@ export function DailyEntryScreen(): React.JSX.Element {
   const [fecha, setFecha] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Weighing | null>(null)
+  const [lockWeight, setLockWeight] = useState(false)
   const [ticketWeighing, setTicketWeighing] = useState<Weighing | null>(null)
   const [ticketOpen, setTicketOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -59,6 +60,13 @@ export function DailyEntryScreen(): React.JSX.Element {
 
   function openEdit(w: Weighing): void {
     setEditing(w)
+    setLockWeight(false)
+    setFormOpen(true)
+  }
+
+  function openEditData(w: Weighing): void {
+    setEditing(w)
+    setLockWeight(true)
     setFormOpen(true)
   }
 
@@ -216,6 +224,14 @@ export function DailyEntryScreen(): React.JSX.Element {
                             <Button
                               variant="ghost"
                               size="icon"
+                              title="Editar datos"
+                              onClick={() => openEditData(w)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => setDeleteTarget(w.id)}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -312,6 +328,7 @@ export function DailyEntryScreen(): React.JSX.Element {
         submitting={createMutation.isPending || updateMutation.isPending}
         pendingConductors={pending.map((w) => w.conductor)}
         pendingPatentes={pending.map((w) => w.patente)}
+        lockWeight={lockWeight}
       />
 
       <WeighingTicket open={ticketOpen} onOpenChange={setTicketOpen} weighing={ticketWeighing} />
