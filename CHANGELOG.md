@@ -4,6 +4,11 @@ Historial de cambios de SLM Bellavista Pesaje. El historial completo de versione
 anteriores a la 1.1.14 está en los [GitHub Releases](https://github.com/dogo3991-hash/Romana/releases)
 del repositorio.
 
+## 1.1.17
+
+- Corrige el color del peso mostrado en "Pesar Automático": se veía casi
+  ilegible por el estilo gris/tenue de los campos deshabilitados.
+
 ## 1.1.16
 
 - Agrega el botón "Pesar Automático" en Peso Bruto: lee en vivo el peso desde el
