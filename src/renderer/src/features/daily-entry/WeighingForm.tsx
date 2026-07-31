@@ -23,6 +23,7 @@ import { useTraslados } from '@renderer/features/trucks/useTraslados'
 import { useLastGuia } from './useWeighings'
 import { useScaleReading } from '@renderer/features/scale/useScaleReading'
 import { subscribeToScaleWeight } from '@renderer/features/scale/scaleConnection'
+import { cn } from '@renderer/lib/utils'
 import type { Database } from '@renderer/types/database.types'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
@@ -412,7 +413,13 @@ export function WeighingForm({
               min="1"
               disabled={!editing || lockWeight || autoWeighOn}
               {...register('peso_bruto')}
-              className="h-14 border-2 border-primary bg-primary/5 text-xl font-semibold text-ink disabled:bg-page disabled:text-muted"
+              className={cn(
+                'h-14 border-2 border-primary bg-primary/5 text-xl font-semibold text-ink disabled:bg-page disabled:text-muted',
+                // Mientras lee en vivo el campo queda deshabilitado pero sigue mostrando
+                // datos activos — el gris y la opacidad reducida de "disabled" normal
+                // (definidos en el Input base) lo dejan casi ilegible ahí.
+                autoWeighOn && 'disabled:text-ink disabled:opacity-100'
+              )}
             />
             {autoWeighOn && (
               <p className="text-xs text-muted">
