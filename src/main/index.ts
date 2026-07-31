@@ -9,6 +9,7 @@ import {
   isCameraProcessRunning,
   stopCameraProcessIfOwned
 } from './cameraProcess'
+import { startScaleReading, stopScaleReading, getScaleStatus } from './scaleSerial'
 import { setupAutoUpdater } from './autoUpdate'
 
 // Esta app corre empaquetada sin consola adjunta: si stdout/stderr queda como un pipe
@@ -182,6 +183,9 @@ app.whenReady().then(() => {
   ipcMain.handle('camera-process:start', () => startCameraProcess())
   ipcMain.handle('camera-process:stop', () => stopCameraProcess())
   ipcMain.handle('camera-process:status', () => isCameraProcessRunning())
+  ipcMain.handle('scale:start', (event) => startScaleReading(event.sender))
+  ipcMain.handle('scale:stop', () => stopScaleReading())
+  ipcMain.handle('scale:status', () => getScaleStatus())
 
   setupAutoUpdater()
   createWindow()
@@ -199,6 +203,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   // Si esta app abrió SLM-Camara-Romana, se cierra junto con ella.
   stopCameraProcessIfOwned()
+  stopScaleReading()
   if (process.platform !== 'darwin') {
     app.quit()
   }

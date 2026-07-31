@@ -23,6 +23,31 @@ const api = {
       ipcRenderer.invoke('camera-process:start'),
     stop: (): Promise<void> => ipcRenderer.invoke('camera-process:stop'),
     status: (): Promise<boolean> => ipcRenderer.invoke('camera-process:status')
+  },
+  scale: {
+    start: (): Promise<{ started: boolean; error?: string }> =>
+      ipcRenderer.invoke('scale:start'),
+    stop: (): Promise<void> => ipcRenderer.invoke('scale:stop'),
+    status: (): Promise<'searching' | 'connected' | 'no-signal' | null> =>
+      ipcRenderer.invoke('scale:status'),
+    onWeight: (callback: (payload: { weightKg: number; raw: string }) => void): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { weightKg: number; raw: string }
+      ): void => callback(payload)
+      ipcRenderer.on('scale:weight', listener)
+      return () => ipcRenderer.removeListener('scale:weight', listener)
+    },
+    onStatus: (
+      callback: (payload: { status: 'searching' | 'connected' | 'no-signal' }) => void
+    ): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { status: 'searching' | 'connected' | 'no-signal' }
+      ): void => callback(payload)
+      ipcRenderer.on('scale:status', listener)
+      return () => ipcRenderer.removeListener('scale:status', listener)
+    }
   }
 }
 

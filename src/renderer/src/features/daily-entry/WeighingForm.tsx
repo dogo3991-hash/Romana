@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -21,6 +21,8 @@ import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
 import { useTrucksByTransportista } from '@renderer/features/trucks/useTrucksAdmin'
 import { useTraslados } from '@renderer/features/trucks/useTraslados'
 import { useLastGuia } from './useWeighings'
+import { useScaleReading } from '@renderer/features/scale/useScaleReading'
+import { subscribeToScaleWeight } from '@renderer/features/scale/scaleConnection'
 import type { Database } from '@renderer/types/database.types'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
@@ -144,6 +146,46 @@ export function WeighingForm({
 
   const { companyId } = useCompanyContext()
   const { refetch: refetchLastGuia } = useLastGuia()
+
+  const [autoWeighOn, setAutoWeighOn] = useState(false)
+  const scale = useScaleReading()
+  const autoWeighOnRef = useRef(autoWeighOn)
+  autoWeighOnRef.current = autoWeighOn
+
+  async function handleToggleAutoWeigh(): Promise<void> {
+    if (autoWeighOn) {
+      setAutoWeighOn(false)
+      await scale.stop()
+    } else {
+      setAutoWeighOn(true)
+      await scale.start()
+    }
+  }
+
+  // Mientras el pesaje automático está activo, cada lectura válida de la báscula
+  // sobreescribe el campo del formulario — el valor que quede al apretar "Guardar" es
+  // el que se captura (la romana oscila mientras el camión se asienta, es esperado).
+  useEffect(() => {
+    if (!autoWeighOn) return
+    return subscribeToScaleWeight(({ weightKg }) => {
+      setValue('peso_bruto', Math.round(weightKg), { shouldValidate: true })
+    })
+  }, [autoWeighOn, setValue])
+
+  // Corta la lectura serial al cerrar el diálogo, para no dejar el puerto COM abierto
+  // entre un ticket y el siguiente.
+  useEffect(() => {
+    if (open) return
+    setAutoWeighOn(false)
+    void scale.stop()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  useEffect(() => {
+    return () => {
+      if (autoWeighOnRef.current) void window.api.scale.stop()
+    }
+  }, [])
 
   // Solo re-sincroniza el formulario cuando el dialog se abre o cambia el registro
   // a editar — nunca en cada render, para no pisar lo que el usuario va tipeando.
@@ -351,16 +393,36 @@ export function WeighingForm({
             label="Peso Bruto (kg)"
             error={errors.peso_bruto?.message}
             labelClassName="text-sm font-semibold text-primary"
+            headerExtra={
+              editing && !lockWeight ? (
+                <Button
+                  type="button"
+                  variant={autoWeighOn ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={handleToggleAutoWeigh}
+                >
+                  Pesar Automático
+                </Button>
+              ) : undefined
+            }
           >
             <Input
               type="number"
               step="1"
               min="1"
-              disabled={!editing || lockWeight}
+              disabled={!editing || lockWeight || autoWeighOn}
               {...register('peso_bruto')}
               className="h-14 border-2 border-primary bg-primary/5 text-xl font-semibold text-ink disabled:bg-page disabled:text-muted"
             />
-            {(!editing || lockWeight) && (
+            {autoWeighOn && (
+              <p className="text-xs text-muted">
+                {scale.state === 'searching' && 'Buscando báscula...'}
+                {scale.state === 'connected' && 'Leyendo peso en vivo.'}
+                {scale.state === 'no-signal' && 'No se detecta peso'}
+              </p>
+            )}
+            {scale.error && <p className="text-xs text-danger">{scale.error}</p>}
+            {(!editing || lockWeight) && !autoWeighOn && (
               <p className="text-xs text-muted">
                 {lockWeight
                   ? 'Para registrar el peso, usa "Agregar peso bruto".'
@@ -399,16 +461,21 @@ function Field({
   label,
   error,
   labelClassName,
+  headerExtra,
   children
 }: {
   label: string
   error?: string
   labelClassName?: string
+  headerExtra?: React.ReactNode
   children: React.ReactNode
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label className={labelClassName}>{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label className={labelClassName}>{label}</Label>
+        {headerExtra}
+      </div>
       {children}
       {error && <p className="text-xs text-danger">{error}</p>}
     </div>
