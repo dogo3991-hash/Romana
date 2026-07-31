@@ -4,6 +4,14 @@ Historial de cambios de SLM Bellavista Pesaje. El historial completo de versione
 anteriores a la 1.1.14 está en los [GitHub Releases](https://github.com/dogo3991-hash/Romana/releases)
 del repositorio.
 
+## 1.1.16
+
+- Agrega el botón "Pesar Automático" en Peso Bruto: lee en vivo el peso desde el
+  visor de la báscula por cable USB-serial, detectando el puerto solo con
+  probarlos (no depende del número de COM ni de la PC). Es opcional y no
+  reemplaza el ingreso manual — si no hay cable conectado, muestra "No se
+  detecta peso" y se puede seguir pesando a mano como siempre.
+
 ## 1.1.15
 
 - Agrega el botón "Editar datos" en la tabla "En Espera" para corregir los datos
