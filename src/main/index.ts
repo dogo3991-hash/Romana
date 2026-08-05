@@ -9,7 +9,7 @@ import {
   isCameraProcessRunning,
   stopCameraProcessIfOwned
 } from './cameraProcess'
-import { startScaleReading, stopScaleReading, getScaleStatus } from './scaleSerial'
+import { startScaleReading, stopScaleReading } from './scaleSerial'
 import { setupAutoUpdater } from './autoUpdate'
 
 // Esta app corre empaquetada sin consola adjunta: si stdout/stderr queda como un pipe
@@ -158,6 +158,12 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  // Arranca sola con la ventana (no espera a que alguien apriete "Pesar
+  // Automático"): así, en el PC donde está el cable de la romana, la lectura
+  // queda corriendo todo el tiempo y hay algo para transmitir a los demás PCs
+  // aunque nadie tenga el diálogo de pesaje abierto ahí.
+  startScaleReading(mainWindow.webContents)
 }
 
 // This method will be called when Electron has finished
@@ -183,9 +189,6 @@ app.whenReady().then(() => {
   ipcMain.handle('camera-process:start', () => startCameraProcess())
   ipcMain.handle('camera-process:stop', () => stopCameraProcess())
   ipcMain.handle('camera-process:status', () => isCameraProcessRunning())
-  ipcMain.handle('scale:start', (event) => startScaleReading(event.sender))
-  ipcMain.handle('scale:stop', () => stopScaleReading())
-  ipcMain.handle('scale:status', () => getScaleStatus())
 
   setupAutoUpdater()
   createWindow()

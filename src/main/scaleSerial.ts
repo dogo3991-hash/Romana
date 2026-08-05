@@ -169,7 +169,8 @@ function tryOpenAndAdopt(
         onWeight(payload)
         if (!settled && consecutiveMatches >= REQUIRED_CONSECUTIVE_MATCHES) finish(port)
       } else {
-        if (frame.length > 0) log(`${path}: trama no coincide con el formato esperado: ${JSON.stringify(frame)}`)
+        if (frame.length > 0)
+          log(`${path}: trama no coincide con el formato esperado: ${JSON.stringify(frame)}`)
         consecutiveMatches = 0
       }
     })
@@ -264,8 +265,4 @@ export function stopScaleReading(): void {
 
 export function isScaleReadingRunning(): boolean {
   return session !== null && !session.stopped
-}
-
-export function getScaleStatus(): ScaleStatus | null {
-  return session?.status ?? null
 }

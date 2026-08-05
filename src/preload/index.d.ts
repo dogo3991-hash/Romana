@@ -17,9 +17,6 @@ interface Api {
     status: () => Promise<boolean>
   }
   scale: {
-    start: () => Promise<{ started: boolean; error?: string }>
-    stop: () => Promise<void>
-    status: () => Promise<'searching' | 'connected' | 'no-signal' | null>
     onWeight: (callback: (payload: { weightKg: number; raw: string }) => void) => () => void
     onStatus: (
       callback: (payload: { status: 'searching' | 'connected' | 'no-signal' }) => void

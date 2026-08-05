@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -150,16 +150,18 @@ export function WeighingForm({
 
   const [autoWeighOn, setAutoWeighOn] = useState(false)
   const scale = useScaleReading()
-  const autoWeighOnRef = useRef(autoWeighOn)
-  autoWeighOnRef.current = autoWeighOn
+  // Mientras no llega una lectura en vivo real (local o de otro PC vía Supabase, por
+  // ejemplo si se cae el internet) el campo se habilita para ingresar el peso a mano,
+  // sin tener que apagar "Pesar Automático" primero.
+  const isLiveReading = autoWeighOn && scale.state === 'connected'
 
-  async function handleToggleAutoWeigh(): Promise<void> {
+  function handleToggleAutoWeigh(): void {
     if (autoWeighOn) {
       setAutoWeighOn(false)
-      await scale.stop()
+      scale.stop()
     } else {
       setAutoWeighOn(true)
-      await scale.start()
+      scale.start()
     }
   }
 
@@ -173,20 +175,14 @@ export function WeighingForm({
     })
   }, [autoWeighOn, setValue])
 
-  // Corta la lectura serial al cerrar el diálogo, para no dejar el puerto COM abierto
-  // entre un ticket y el siguiente.
+  // Al cerrar el diálogo, deja de aplicar lecturas en vivo al formulario — el puerto
+  // serie sigue abierto (lo maneja el proceso main de forma continua, no este botón).
   useEffect(() => {
     if (open) return
     setAutoWeighOn(false)
-    void scale.stop()
+    scale.stop()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
-
-  useEffect(() => {
-    return () => {
-      if (autoWeighOnRef.current) void window.api.scale.stop()
-    }
-  }, [])
 
   // Solo re-sincroniza el formulario cuando el dialog se abre o cambia el registro
   // a editar — nunca en cada render, para no pisar lo que el usuario va tipeando.
@@ -411,21 +407,22 @@ export function WeighingForm({
               type="number"
               step="1"
               min="1"
-              disabled={!editing || lockWeight || autoWeighOn}
+              disabled={!editing || lockWeight || isLiveReading}
               {...register('peso_bruto')}
               className={cn(
                 'h-14 border-2 border-primary bg-primary/5 text-xl font-semibold text-ink disabled:bg-page disabled:text-muted',
                 // Mientras lee en vivo el campo queda deshabilitado pero sigue mostrando
                 // datos activos — el gris y la opacidad reducida de "disabled" normal
                 // (definidos en el Input base) lo dejan casi ilegible ahí.
-                autoWeighOn && 'disabled:text-ink disabled:opacity-100'
+                isLiveReading && 'disabled:text-ink disabled:opacity-100'
               )}
             />
             {autoWeighOn && (
               <p className="text-xs text-muted">
                 {scale.state === 'searching' && 'Buscando báscula...'}
                 {scale.state === 'connected' && 'Leyendo peso en vivo.'}
-                {scale.state === 'no-signal' && 'No se detecta peso'}
+                {scale.state === 'no-signal' &&
+                  'No se detecta peso, podés ingresar el peso manualmente.'}
               </p>
             )}
             {scale.error && <p className="text-xs text-danger">{scale.error}</p>}

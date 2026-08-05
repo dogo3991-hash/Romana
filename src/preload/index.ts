@@ -25,11 +25,6 @@ const api = {
     status: (): Promise<boolean> => ipcRenderer.invoke('camera-process:status')
   },
   scale: {
-    start: (): Promise<{ started: boolean; error?: string }> =>
-      ipcRenderer.invoke('scale:start'),
-    stop: (): Promise<void> => ipcRenderer.invoke('scale:stop'),
-    status: (): Promise<'searching' | 'connected' | 'no-signal' | null> =>
-      ipcRenderer.invoke('scale:status'),
     onWeight: (callback: (payload: { weightKg: number; raw: string }) => void): (() => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
