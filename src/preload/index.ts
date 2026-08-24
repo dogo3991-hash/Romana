@@ -17,6 +17,9 @@ const api = {
   notifyPrintReady: (): void => {
     ipcRenderer.send('ticket-print-ready')
   },
+  notifyPrintError: (message: string): void => {
+    ipcRenderer.send('ticket-print-error', message)
+  },
   openPath: (filePath: string): Promise<string> => ipcRenderer.invoke('open-path', filePath),
   cameraProcess: {
     start: (): Promise<{ started: boolean; error?: string }> =>

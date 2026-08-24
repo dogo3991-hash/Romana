@@ -10,6 +10,7 @@ interface Api {
   printTicketPdf: (weighingId: string) => Promise<ArrayBuffer>
   printTicketDirect: (weighingId: string) => Promise<void>
   notifyPrintReady: () => void
+  notifyPrintError: (message: string) => void
   openPath: (filePath: string) => Promise<string>
   cameraProcess: {
     start: () => Promise<{ started: boolean; error?: string }>

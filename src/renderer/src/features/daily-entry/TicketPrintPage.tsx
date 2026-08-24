@@ -17,6 +17,16 @@ type Conductor = Database['public']['Tables']['conductors']['Row']
 // crear/completar el pesaje, se lee directo de ahí primero y solo se intenta
 // la red si falta algo (ej. reimprimir un ticket muy viejo en una PC nueva).
 
+// Esta ventana abre con autoRefreshToken desactivado (ver supabaseClient.ts,
+// para no chocar con el refresco en segundo plano de la ventana principal).
+// Si el token ya estaba vencido cuando se abrió, un pedido a Supabase falla
+// por autenticación aunque haya internet. getSession() no depende de
+// autoRefreshToken: si detecta el token vencido, lo refresca con el refresh
+// token guardado antes de que se dispare el pedido de red.
+async function ensureFreshSession(): Promise<void> {
+  await supabase.auth.getSession()
+}
+
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function useWeighingById(id: string | null) {
   return useQuery({
@@ -25,6 +35,7 @@ function useWeighingById(id: string | null) {
       const db = await getOfflineDb()
       const local = await db.get('weighings', id!)
       if (local) return local
+      await ensureFreshSession()
       const { data, error } = await supabase.from('weighings').select('*').eq('id', id!).single()
       if (error) throw error
       await db.put('weighings', data)
@@ -42,6 +53,7 @@ function useTransportistasLocalFirst() {
       const db = await getOfflineDb()
       const local = await db.getAll('transportistas')
       if (local.length > 0) return local
+      await ensureFreshSession()
       const { data, error } = await supabase.from('transportistas').select('*').order('nombre')
       if (error) throw error
       return data as Transportista[]
@@ -57,6 +69,7 @@ function useConductorsByTransportistaLocalFirst(transportistaId: string | null) 
       const db = await getOfflineDb()
       const local = await db.getAllFromIndex('conductors', 'by_transportista', transportistaId!)
       if (local.length > 0) return local
+      await ensureFreshSession()
       const { data, error } = await supabase
         .from('conductors')
         .select('*')
@@ -73,7 +86,7 @@ export function TicketPrintPage(): React.JSX.Element {
   const [searchParams] = useSearchParams()
   const id = searchParams.get('id')
 
-  const { data: weighing, isLoading, isError } = useWeighingById(id)
+  const { data: weighing, isLoading, isError, error } = useWeighingById(id)
   const { data: transportistas } = useTransportistasLocalFirst()
   const { data: conductors } = useConductorsByTransportistaLocalFirst(
     weighing?.transportista_id ?? null
@@ -82,10 +95,22 @@ export function TicketPrintPage(): React.JSX.Element {
   const ready = !isLoading && (weighing === undefined || transportistas !== undefined)
 
   useEffect(() => {
-    if (ready || isError) {
+    if (isError) {
+      window.api.notifyPrintError(
+        error instanceof Error ? error.message : 'No se pudo cargar el ticket'
+      )
+    } else if (ready) {
       window.api.notifyPrintReady()
     }
-  }, [ready, isError])
+  }, [ready, isError, error])
+
+  if (isError) {
+    return (
+      <div className="bg-white p-5 text-xs text-ink">
+        No se pudo cargar el ticket: {error instanceof Error ? error.message : 'error desconocido'}
+      </div>
+    )
+  }
 
   if (!weighing) {
     return <div className="bg-white p-5 text-xs text-ink">Cargando ticket...</div>
