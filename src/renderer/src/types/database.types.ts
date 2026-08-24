@@ -261,6 +261,7 @@ export type Database = {
           transportista_id: string | null
           traslado: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           carga?: number | null
@@ -281,6 +282,7 @@ export type Database = {
           transportista_id?: string | null
           traslado?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           carga?: number | null
@@ -301,6 +303,7 @@ export type Database = {
           transportista_id?: string | null
           traslado?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -322,6 +325,55 @@ export type Database = {
             columns: ['transportista_id']
             isOneToOne: false
             referencedRelation: 'transportistas'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'weighings_updated_by_fkey'
+            columns: ['updated_by']
+            isOneToOne: false
+            referencedRelation: 'operators'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      weighings_audit: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: number
+          new_data: Json
+          old_data: Json
+          weighing_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: number
+          new_data: Json
+          old_data: Json
+          weighing_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: number
+          new_data?: Json
+          old_data?: Json
+          weighing_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'weighings_audit_changed_by_fkey'
+            columns: ['changed_by']
+            isOneToOne: false
+            referencedRelation: 'operators'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'weighings_audit_weighing_id_fkey'
+            columns: ['weighing_id']
+            isOneToOne: false
+            referencedRelation: 'weighings'
             referencedColumns: ['id']
           }
         ]
