@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { Pencil, Plus, Printer, Trash2 } from 'lucide-react'
+import { History, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
 import { CompanySelector } from '@renderer/features/companies/CompanySelector'
 import { useAuth } from '@renderer/auth/AuthProvider'
@@ -16,6 +16,7 @@ import {
 } from './useWeighings'
 import { WeighingForm, type WeighingFormValues } from './WeighingForm'
 import { WeighingTicket } from './WeighingTicket'
+import { WeighingHistoryDialog } from './WeighingHistoryDialog'
 import { ConfirmDialog } from '@renderer/components/ui/confirm-dialog'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
 import { useCameraAlerts } from '@renderer/features/camera/useCameraAlerts'
@@ -36,6 +37,8 @@ export function DailyEntryScreen(): React.JSX.Element {
   const [ticketWeighing, setTicketWeighing] = useState<Weighing | null>(null)
   const [ticketOpen, setTicketOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [historyWeighingId, setHistoryWeighingId] = useState<string | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const { data: weighings, isLoading } = useDailyWeighings(companyId, fecha)
   const { data: dailySummary } = useDailySummary(companyId, fecha)
@@ -110,6 +113,11 @@ export function DailyEntryScreen(): React.JSX.Element {
   function openTicket(w: Weighing): void {
     setTicketWeighing(w)
     setTicketOpen(true)
+  }
+
+  function openHistory(w: Weighing): void {
+    setHistoryWeighingId(w.id)
+    setHistoryOpen(true)
   }
 
   async function handleDelete(): Promise<void> {
@@ -299,19 +307,30 @@ export function DailyEntryScreen(): React.JSX.Element {
                   </td>
                   <td className="px-4 py-2 text-muted">{w.traslado}</td>
                   <td className="px-4 py-2">
-                    {!isViewer && (
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openTicket(w)}>
-                          <Printer className="h-4 w-4" />
+                    <div className="flex justify-end gap-1">
+                      {w.updated_at !== w.created_at && (
+                        <Button variant="ghost" size="icon" onClick={() => openHistory(w)}>
+                          <History className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
+                      )}
+                      {!isViewer && (
+                        <>
+                          <Button variant="ghost" size="icon" onClick={() => openTicket(w)}>
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteTarget(w.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -332,6 +351,13 @@ export function DailyEntryScreen(): React.JSX.Element {
       />
 
       <WeighingTicket open={ticketOpen} onOpenChange={setTicketOpen} weighing={ticketWeighing} />
+
+      <WeighingHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        weighingId={historyWeighingId}
+        transportistaNameById={transportistaNameById}
+      />
 
       <ConfirmDialog
         open={!!deleteTarget}
