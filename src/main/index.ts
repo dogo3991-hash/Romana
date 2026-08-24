@@ -78,11 +78,25 @@ async function createReadyTicketPrintWindow(weighingId: string): Promise<Browser
       // Mas largo que el timeout de fetch del cliente de Supabase (15s): si la
       // conectividad recien se corto y todavia no se detecto, la primera
       // lectura offline puede tardar hasta ese tiempo en caer al dato local.
-      const timeout = setTimeout(() => reject(new Error('Tiempo de espera agotado')), 20000)
-      ipcMain.once('ticket-print-ready', () => {
+      const timeout = setTimeout(() => finish(() => reject(new Error('Tiempo de espera agotado'))), 20000)
+
+      function finish(action: () => void): void {
         clearTimeout(timeout)
-        resolve()
-      })
+        ipcMain.removeListener('ticket-print-ready', onReady)
+        ipcMain.removeListener('ticket-print-error', onError)
+        action()
+      }
+
+      function onReady(): void {
+        finish(resolve)
+      }
+
+      function onError(_event: Electron.IpcMainEvent, message: string): void {
+        finish(() => reject(new Error(message)))
+      }
+
+      ipcMain.once('ticket-print-ready', onReady)
+      ipcMain.once('ticket-print-error', onError)
       loadRendererRoute(printWindow, `/ticket-print?id=${weighingId}`)
     })
   } catch (err) {
