@@ -14,35 +14,44 @@ import { ReportsScreen } from '@renderer/features/reports/ReportsScreen'
 import { ConductorsScreen } from '@renderer/features/conductors/ConductorsScreen'
 import { TrucksScreen } from '@renderer/features/trucks/TrucksScreen'
 import { TicketPrintPage } from '@renderer/features/daily-entry/TicketPrintPage'
+import { useWeighingsRealtimeSync } from '@renderer/features/daily-entry/useWeighingsRealtimeSync'
 import { AboutScreen } from '@renderer/features/about/AboutScreen'
 import { ToastViewport } from '@renderer/components/ui/toast'
 
 function MainApp(): React.JSX.Element {
   return (
     <RequireAuth>
-      <CompanyProvider>
-        <AppShell>
-          <Routes>
-            <Route path="/" element={<DailyEntryScreen />} />
-            <Route path="/conductores" element={<ConductorsScreen />} />
-            <Route path="/camiones" element={<TrucksScreen />} />
-            <Route path="/informes" element={<ReportsScreen />} />
-            <Route path="/resumen-mensual" element={<MonthlySummaryScreen />} />
-            <Route path="/historico" element={<HistoricalBackfillScreen />} />
-            <Route path="/acerca-de" element={<AboutScreen />} />
-            <Route
-              path="/admin"
-              element={
-                <RequireAdmin>
-                  <AdminScreen />
-                </RequireAdmin>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AppShell>
-      </CompanyProvider>
+      <AuthenticatedApp />
     </RequireAuth>
+  )
+}
+
+function AuthenticatedApp(): React.JSX.Element {
+  useWeighingsRealtimeSync()
+
+  return (
+    <CompanyProvider>
+      <AppShell>
+        <Routes>
+          <Route path="/" element={<DailyEntryScreen />} />
+          <Route path="/conductores" element={<ConductorsScreen />} />
+          <Route path="/camiones" element={<TrucksScreen />} />
+          <Route path="/informes" element={<ReportsScreen />} />
+          <Route path="/resumen-mensual" element={<MonthlySummaryScreen />} />
+          <Route path="/historico" element={<HistoricalBackfillScreen />} />
+          <Route path="/acerca-de" element={<AboutScreen />} />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminScreen />
+              </RequireAdmin>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppShell>
+    </CompanyProvider>
   )
 }
 
