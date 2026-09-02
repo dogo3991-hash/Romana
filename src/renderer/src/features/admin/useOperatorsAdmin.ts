@@ -37,6 +37,18 @@ export function useCreateOperator() {
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function useResetOperatorPassword() {
+  return useMutation({
+    mutationFn: async ({ operator_id, password }: { operator_id: string; password: string }) => {
+      const { error } = await supabase.functions.invoke('update-operator-password', {
+        body: { operator_id, password }
+      })
+      if (error) throw error
+    }
+  })
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function useUpdateOperator() {
   const queryClient = useQueryClient()
   return useMutation({
