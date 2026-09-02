@@ -4,8 +4,14 @@ import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { Badge } from '@renderer/components/ui/badge'
 import { useAllCompanies, useCreateCompany, useUpdateCompany } from './useCompaniesAdmin'
-import { useAllOperators, useCreateOperator, useUpdateOperator } from './useOperatorsAdmin'
+import {
+  useAllOperators,
+  useCreateOperator,
+  useResetOperatorPassword,
+  useUpdateOperator
+} from './useOperatorsAdmin'
 import { OperatorForm, type OperatorFormValues } from './OperatorForm'
+import { ResetPasswordDialog } from './ResetPasswordDialog'
 
 export function AdminScreen(): React.JSX.Element {
   return (
@@ -97,8 +103,12 @@ function OperatorsSection(): React.JSX.Element {
   const companyNameById = new Map(companies?.map((c) => [c.id, c.name]))
   const createMutation = useCreateOperator()
   const updateMutation = useUpdateOperator()
+  const resetPasswordMutation = useResetOperatorPassword()
   const [formOpen, setFormOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [passwordTarget, setPasswordTarget] = useState<{ id: string; full_name: string } | null>(
+    null
+  )
 
   async function handleCreate(values: OperatorFormValues): Promise<void> {
     setError(null)
@@ -189,6 +199,13 @@ function OperatorsSection(): React.JSX.Element {
                     >
                       {o.active ? 'Desactivar' : 'Activar'}
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPasswordTarget({ id: o.id, full_name: o.full_name })}
+                    >
+                      Cambiar contraseña
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -203,6 +220,20 @@ function OperatorsSection(): React.JSX.Element {
         onSubmit={handleCreate}
         submitting={createMutation.isPending}
       />
+
+      {passwordTarget && (
+        <ResetPasswordDialog
+          open={!!passwordTarget}
+          onOpenChange={(open) => {
+            if (!open) setPasswordTarget(null)
+          }}
+          operatorName={passwordTarget.full_name}
+          submitting={resetPasswordMutation.isPending}
+          onSubmit={(password) =>
+            resetPasswordMutation.mutateAsync({ operator_id: passwordTarget.id, password })
+          }
+        />
+      )}
     </section>
   )
 }
