@@ -33,6 +33,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          locked_patente: string | null
           nombre: string
           rut: string
           transportista_id: string
@@ -40,6 +41,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          locked_patente?: string | null
           nombre: string
           rut: string
           transportista_id: string
@@ -47,6 +49,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          locked_patente?: string | null
           nombre?: string
           rut?: string
           transportista_id?: string
