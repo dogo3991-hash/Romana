@@ -24,6 +24,7 @@ import { useLastGuia } from './useWeighings'
 import { useScaleReading } from '@renderer/features/scale/useScaleReading'
 import { subscribeToScaleWeight } from '@renderer/features/scale/scaleConnection'
 import { cn } from '@renderer/lib/utils'
+import { getTruckColor, truckColorCssValue } from '@renderer/lib/truckColors'
 import type { Database } from '@renderer/types/database.types'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
@@ -354,11 +355,27 @@ export function WeighingForm({
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {patenteOptions?.map((t) => (
-                        <SelectItem key={t.patente} value={t.patente}>
-                          {t.patente}
-                        </SelectItem>
-                      ))}
+                      {patenteOptions?.map((t) => {
+                        const colorOption = getTruckColor(t.color)
+                        return (
+                          <SelectItem
+                            key={t.patente}
+                            value={t.patente}
+                            className={colorOption ? 'truck-swatch-item focus:bg-transparent' : undefined}
+                            style={
+                              colorOption
+                                ? ({
+                                    '--truck-bg': truckColorCssValue(colorOption, 'base'),
+                                    '--truck-bg-hover': truckColorCssValue(colorOption, 'hover'),
+                                    color: colorOption.textColor
+                                  } as React.CSSProperties)
+                                : undefined
+                            }
+                          >
+                            {t.patente}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 )}
