@@ -33,6 +33,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          locked_patente: string | null
           nombre: string
           rut: string
           transportista_id: string
@@ -40,6 +41,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          locked_patente?: string | null
           nombre: string
           rut: string
           transportista_id: string
@@ -47,6 +49,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          locked_patente?: string | null
           nombre?: string
           rut?: string
           transportista_id?: string
@@ -208,6 +211,7 @@ export type Database = {
       }
       trucks: {
         Row: {
+          color: string | null
           created_at: string
           id: string
           patente: string
@@ -216,6 +220,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           id?: string
           patente: string
@@ -224,6 +229,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           id?: string
           patente?: string

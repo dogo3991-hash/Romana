@@ -33,3 +33,15 @@ body {
 @page {
   margin: 1.5cm;
 }
+
+/* Distintivo de color por camión en el selector de patente
+   (features/daily-entry/WeighingForm.tsx). --truck-bg/--truck-bg-hover se
+   fijan inline por item; :hover y [data-highlighted] cubren tanto mouse
+   como navegación por teclado en Radix Select. */
+.truck-swatch-item {
+  background: var(--truck-bg);
+}
+.truck-swatch-item:hover,
+.truck-swatch-item[data-highlighted] {
+  background: var(--truck-bg-hover);
+}

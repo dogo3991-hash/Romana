@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Lock, Unlock } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
@@ -15,6 +16,7 @@ import {
 } from '@renderer/components/ui/select'
 import {
   useConductorsByTransportista,
+  useSetConductorLockedPatente,
   useTransportistas
 } from '@renderer/features/conductors/useConductorsAdmin'
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
@@ -24,6 +26,7 @@ import { useLastGuia } from './useWeighings'
 import { useScaleReading } from '@renderer/features/scale/useScaleReading'
 import { subscribeToScaleWeight } from '@renderer/features/scale/scaleConnection'
 import { cn } from '@renderer/lib/utils'
+import { getTruckColor, truckColorCssValue } from '@renderer/lib/truckColors'
 import type { Database } from '@renderer/types/database.types'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
@@ -237,6 +240,33 @@ export function WeighingForm({
     if (truck) setValue('tara', truck.tara)
   }
 
+  // Candado conductor -> patente: si el conductor elegido tiene una patente
+  // bloqueada y esa patente sigue disponible para elegir, se autocompleta y
+  // el campo Patente queda deshabilitado hasta que se desbloquee.
+  const conductorNombre = watch('conductor')
+  const selectedConductor = conductors?.find((c) => c.nombre === conductorNombre)
+  const patenteValue = watch('patente')
+  const isLockActive =
+    !!selectedConductor?.locked_patente &&
+    !!patenteOptions?.some((t) => t.patente === selectedConductor.locked_patente)
+  const setConductorLock = useSetConductorLockedPatente()
+
+  function handleConductorChange(nombre: string): void {
+    setValue('conductor', nombre)
+    const conductor = conductors?.find((c) => c.nombre === nombre)
+    if (!conductor?.locked_patente) return
+    if (!patenteOptions?.some((t) => t.patente === conductor.locked_patente)) return
+    handlePatenteChange(conductor.locked_patente)
+  }
+
+  function toggleConductorLock(): void {
+    if (!selectedConductor) return
+    setConductorLock.mutate({
+      id: selectedConductor.id,
+      locked_patente: isLockActive ? null : patenteValue || null
+    })
+  }
+
   const pesoBruto = Number(watch('peso_bruto')) || 0
   const tara = Number(watch('tara')) || 0
   const neto = pesoBruto > 0 && tara > 0 && pesoBruto > tara ? pesoBruto - tara : null
@@ -293,7 +323,7 @@ export function WeighingForm({
               control={control}
               name="conductor"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select value={field.value} onValueChange={handleConductorChange}>
                   <SelectTrigger>
                     <SelectValue
                       placeholder={
@@ -340,12 +370,42 @@ export function WeighingForm({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Patente" error={errors.patente?.message}>
+            <Field
+              label="Patente"
+              error={errors.patente?.message}
+              headerExtra={
+                selectedConductor ? (
+                  <Button
+                    type="button"
+                    variant={isLockActive ? 'default' : 'outline'}
+                    size="sm"
+                    disabled={!isLockActive && !patenteValue}
+                    onClick={toggleConductorLock}
+                    title={
+                      isLockActive
+                        ? `Desbloquear patente de ${selectedConductor.nombre}`
+                        : `Bloquear esta patente para ${selectedConductor.nombre}`
+                    }
+                  >
+                    {isLockActive ? (
+                      <Unlock className="h-3.5 w-3.5" />
+                    ) : (
+                      <Lock className="h-3.5 w-3.5" />
+                    )}
+                    {isLockActive ? 'Desbloquear' : 'Bloquear'}
+                  </Button>
+                ) : undefined
+              }
+            >
               <Controller
                 control={control}
                 name="patente"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={handlePatenteChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={handlePatenteChange}
+                    disabled={isLockActive}
+                  >
                     <SelectTrigger>
                       <SelectValue
                         placeholder={
@@ -354,11 +414,29 @@ export function WeighingForm({
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {patenteOptions?.map((t) => (
-                        <SelectItem key={t.patente} value={t.patente}>
-                          {t.patente}
-                        </SelectItem>
-                      ))}
+                      {patenteOptions?.map((t) => {
+                        const colorOption = getTruckColor(t.color)
+                        return (
+                          <SelectItem
+                            key={t.patente}
+                            value={t.patente}
+                            className={
+                              colorOption ? 'truck-swatch-item focus:bg-transparent' : undefined
+                            }
+                            style={
+                              colorOption
+                                ? ({
+                                    '--truck-bg': truckColorCssValue(colorOption, 'base'),
+                                    '--truck-bg-hover': truckColorCssValue(colorOption, 'hover'),
+                                    color: colorOption.textColor
+                                  } as React.CSSProperties)
+                                : undefined
+                            }
+                          >
+                            {t.patente}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 )}

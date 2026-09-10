@@ -147,8 +147,29 @@ export function useConductorsByTransportista(transportistaId: string | null) {
           await Promise.all(rows.map((r) => tx.store.put(r)))
           await tx.done
         }
-      }).then((rows) => rows.map(({ nombre, rut }) => ({ nombre, rut }))),
+      }).then((rows) =>
+        rows.map(({ id, nombre, rut, locked_patente }) => ({ id, nombre, rut, locked_patente }))
+      ),
     enabled: !!transportistaId
+  })
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function useSetConductorLockedPatente() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, locked_patente }: { id: string; locked_patente: string | null }) =>
+      updateRow<Conductor, { locked_patente: string | null }>({
+        table: 'conductors',
+        id,
+        values: { locked_patente },
+        remote: () =>
+          supabase.from('conductors').update({ locked_patente }).eq('id', id).select().single()
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conductors-by-transportista'] })
+      queryClient.invalidateQueries({ queryKey: ['conductors-admin'] })
+    }
   })
 }
 

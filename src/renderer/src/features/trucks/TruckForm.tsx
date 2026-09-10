@@ -13,6 +13,8 @@ import {
   SelectValue
 } from '@renderer/components/ui/select'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
+import { TRUCK_COLORS, truckColorBackground } from '@renderer/lib/truckColors'
+import { cn } from '@renderer/lib/utils'
 import type { Database } from '@renderer/types/database.types'
 
 type Truck = Database['public']['Tables']['trucks']['Row']
@@ -20,7 +22,8 @@ type Truck = Database['public']['Tables']['trucks']['Row']
 const schema = z.object({
   patente: z.string().min(1, 'Requerido'),
   tara: z.coerce.number().int('Debe ser un número entero').positive('Debe ser mayor a 0'),
-  transportista_id: z.string().min(1, 'Requerido')
+  transportista_id: z.string().min(1, 'Requerido'),
+  color: z.string().nullable()
 })
 
 export type TruckFormValues = z.output<typeof schema>
@@ -54,9 +57,10 @@ export function TruckForm({
       ? {
           patente: editing.patente,
           tara: editing.tara,
-          transportista_id: editing.transportista_id ?? ''
+          transportista_id: editing.transportista_id ?? '',
+          color: editing.color ?? null
         }
-      : { patente: '', tara: '', transportista_id: '' }
+      : { patente: '', tara: '', transportista_id: '', color: null }
   })
 
   async function submit(values: TruckFormValues): Promise<void> {
@@ -107,6 +111,42 @@ export function TruckForm({
             {errors.transportista_id && (
               <p className="text-xs text-danger">{errors.transportista_id.message}</p>
             )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Color</Label>
+            <Controller
+              control={control}
+              name="color"
+              render={({ field }) => (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    title="Sin color"
+                    onClick={() => field.onChange(null)}
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-full border border-line bg-surface text-xs text-muted',
+                      field.value === null && 'ring-2 ring-primary ring-offset-2'
+                    )}
+                  >
+                    ×
+                  </button>
+                  {TRUCK_COLORS.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      title={option.label}
+                      onClick={() => field.onChange(option.key)}
+                      style={truckColorBackground(option, 'base')}
+                      className={cn(
+                        'h-8 w-8 rounded-full border border-line',
+                        field.value === option.key && 'ring-2 ring-primary ring-offset-2'
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            />
           </div>
 
           <div className="mt-2 flex justify-end gap-2">

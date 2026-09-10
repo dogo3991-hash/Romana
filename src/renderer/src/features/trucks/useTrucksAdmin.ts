@@ -68,7 +68,7 @@ export function useTrucksByTransportista(transportistaId: string | null) {
           await Promise.all(rows.map((r) => tx.store.put(r)))
           await tx.done
         }
-      }).then((rows) => rows.map(({ patente, tara }) => ({ patente, tara }))),
+      }).then((rows) => rows.map(({ patente, tara, color }) => ({ patente, tara, color }))),
     enabled: !!transportistaId
   })
 }
@@ -77,6 +77,7 @@ interface TruckInput {
   patente: string
   tara: number
   transportista_id: string
+  color: string | null
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
