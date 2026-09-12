@@ -32,6 +32,8 @@ const REQUIRED_CONSECUTIVE_MATCHES = 2
 const PORT_TRY_TIMEOUT_MS = 3500
 const WATCHDOG_MS = 3000
 const RESCAN_DELAY_MS = 3000
+const WATCHDOG_RESTART_WINDOW_MS = 60_000
+const WATCHDOG_RESTART_WARN_THRESHOLD = 3
 
 function log(msg: string): void {
   console.log(`[scale] ${msg}`)
@@ -72,6 +74,8 @@ interface Session {
   currentPort: SerialPort | null
   watchdogTimer: NodeJS.Timeout | null
   status: ScaleStatus
+  // Timestamps de reinicios forzados por watchdog, solo para diagnóstico en terreno.
+  watchdogRestartLog: number[]
 }
 
 let session: Session | null = null
@@ -98,8 +102,23 @@ function armWatchdog(s: Session): void {
   clearWatchdog(s)
   s.watchdogTimer = setTimeout(() => {
     if (s.stopped) return
-    log('watchdog: silencio prolongado, no-signal')
     setStatus(s, 'no-signal')
+    if (!s.currentPort) {
+      // Silencio durante la prueba de un candidato: ya lo cubre el timeout propio de
+      // tryOpenAndAdopt, no hay puerto adoptado que forzar a reabrir.
+      log('watchdog: silencio prolongado durante prueba de candidato, sin forzar reinicio')
+      return
+    }
+    const now = Date.now()
+    s.watchdogRestartLog = s.watchdogRestartLog.filter((t) => now - t < WATCHDOG_RESTART_WINDOW_MS)
+    s.watchdogRestartLog.push(now)
+    if (s.watchdogRestartLog.length >= WATCHDOG_RESTART_WARN_THRESHOLD) {
+      log(
+        `watchdog: ${s.watchdogRestartLog.length} reinicios forzados en el último minuto — posible problema de hardware/cableado`
+      )
+    }
+    log('watchdog: silencio prolongado con puerto adoptado, forzando cierre/reapertura')
+    restartScan(s, 'watchdog')
   }, WATCHDOG_MS)
 }
 
@@ -107,10 +126,17 @@ function closeCurrentPort(s: Session): void {
   clearWatchdog(s)
   const port = s.currentPort
   s.currentPort = null
-  if (port && port.isOpen) {
-    port.close(() => {
-      // Nada que hacer: el cierre es best-effort, la sesión ya se está reiniciando o deteniendo.
-    })
+  if (port) {
+    // Evita que el close() de abajo (o un error/close ya en curso) vuelva a disparar
+    // restartScan a través de los listeners que adoptPort dejó enganchados: quien haya
+    // llamado a closeCurrentPort ya está reiniciando la sesión.
+    port.removeAllListeners('error')
+    port.removeAllListeners('close')
+    if (port.isOpen) {
+      port.close(() => {
+        // Nada que hacer: el cierre es best-effort, la sesión ya se está reiniciando o deteniendo.
+      })
+    }
   }
 }
 
@@ -225,18 +251,19 @@ function adoptPort(s: Session, port: SerialPort): void {
   // scale:weight por cada trama válida — acá solo falta detectar que el puerto se cae.
   port.on('error', (err) => {
     log(`puerto adoptado: error - ${err.message}, reintentando escaneo`)
-    restartScan(s)
+    restartScan(s, 'error')
   })
   port.on('close', () => {
     if (!s.stopped) {
       log('puerto adoptado se cerró inesperadamente, reintentando escaneo')
-      restartScan(s)
+      restartScan(s, 'close')
     }
   })
 }
 
-function restartScan(s: Session): void {
+function restartScan(s: Session, reason: 'watchdog' | 'error' | 'close'): void {
   if (s.stopped) return
+  log(`reiniciando escaneo (motivo: ${reason})`)
   closeCurrentPort(s)
   void runScan(s)
 }
@@ -250,7 +277,8 @@ export function startScaleReading(sender: WebContents): { started: boolean; erro
     stopped: false,
     currentPort: null,
     watchdogTimer: null,
-    status: 'searching'
+    status: 'searching',
+    watchdogRestartLog: []
   }
   void runScan(session)
   return { started: true }
