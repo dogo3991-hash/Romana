@@ -8,6 +8,7 @@ import { useHistoricalTotals } from '@renderer/features/historical-backfill/useH
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
+import { drainQueue, getPendingSyncCount } from '@renderer/lib/syncEngine'
 import { useWeighingsInRange } from './useReportsData'
 import { exportHistoricalReport, exportWeighingsReport } from './exportExcel'
 import { TruckHistorySection } from './TruckHistorySection'
@@ -31,6 +32,17 @@ export function ReportsScreen(): React.JSX.Element {
     setError(null)
     setExportingDetail(true)
     try {
+      // El informe lee directo de Supabase: ediciones que quedaron en la cola
+      // offline no aparecerían. Se intenta subirlas antes, y si no se puede se
+      // bloquea en vez de generar un informe desactualizado.
+      await drainQueue()
+      const pending = await getPendingSyncCount()
+      if (pending > 0) {
+        setError(
+          `Hay ${pending} cambio${pending === 1 ? '' : 's'} sin sincronizar con el servidor y el informe no ${pending === 1 ? 'lo' : 'los'} incluiría. Revisa la conexión y vuelve a intentar.`
+        )
+        return
+      }
       const { data, error: queryError } = await weighingsQuery.refetch()
       if (queryError) throw queryError
       if (!data || data.length === 0) {

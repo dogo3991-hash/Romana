@@ -1,7 +1,10 @@
+import { useEffect } from 'react'
 import { WifiOff } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useConnectivity } from '@renderer/lib/connectivity'
 import { drainQueue, getPendingSyncCount } from '@renderer/lib/syncEngine'
+
+const RETRY_INTERVAL_MS = 30_000
 
 export function SyncStatusIndicator(): React.JSX.Element | null {
   const connectivity = useConnectivity()
@@ -10,6 +13,15 @@ export function SyncStatusIndicator(): React.JSX.Element | null {
     queryFn: getPendingSyncCount,
     refetchInterval: 3000
   })
+
+  // Si un drenado falla estando online (sin pasar a offline), nada más lo
+  // vuelve a disparar: los cambios quedarían pendientes hasta reiniciar la app.
+  const hasPending = pending > 0
+  useEffect(() => {
+    if (connectivity !== 'online' || !hasPending) return
+    const interval = setInterval(() => void drainQueue(), RETRY_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [connectivity, hasPending])
 
   if (connectivity === 'online' && pending === 0) return null
 
