@@ -2,33 +2,43 @@ import { getOfflineDb, type SyncQueueEntry } from './offlineDb'
 import { supabase } from '@renderer/lib/supabaseClient'
 import { queryClient } from '@renderer/lib/queryClient'
 import { notifyError } from '@renderer/components/ui/toast'
+import { reportFailure } from './connectivity'
 
-let draining = false
+let current: Promise<void> | null = null
 
-export async function drainQueue(): Promise<void> {
-  if (draining) return
-  draining = true
-  try {
-    const db = await getOfflineDb()
-    for (;;) {
-      const all = await db.getAll('sync_queue')
-      const next = all.sort((a, b) => a.seq - b.seq)[0]
-      if (!next) break
-      try {
-        await applyOne(next)
-        await db.delete('sync_queue', next.seq)
-      } catch (err) {
-        await db.put('sync_queue', {
-          ...next,
-          attempts: next.attempts + 1,
-          lastError: err instanceof Error ? err.message : 'Error desconocido'
-        })
-        notifyError('No se pudo sincronizar todo lo pendiente. Se reintentará automáticamente.')
-        break
-      }
+// Si ya hay un drenado en curso se devuelve esa misma promesa, así quien
+// necesita esperar a que la cola se vacíe (ej. el informe Excel) no sigue
+// antes de tiempo.
+export function drainQueue(): Promise<void> {
+  if (!current) {
+    current = runDrain().finally(() => {
+      current = null
+    })
+  }
+  return current
+}
+
+async function runDrain(): Promise<void> {
+  const db = await getOfflineDb()
+  for (;;) {
+    const all = await db.getAll('sync_queue')
+    const next = all.sort((a, b) => a.seq - b.seq)[0]
+    if (!next) break
+    try {
+      await applyOne(next)
+      await db.delete('sync_queue', next.seq)
+    } catch (err) {
+      await db.put('sync_queue', {
+        ...next,
+        attempts: next.attempts + 1,
+        lastError: err instanceof Error ? err.message : 'Error desconocido'
+      })
+      // Sin `code` el pedido nunca llegó a Postgrest: es un problema de red.
+      // Pasar a offline activa el prober, que vuelve a drenar al reconectar.
+      if (!(err as { code?: unknown } | null)?.code) reportFailure()
+      notifyError('No se pudo sincronizar todo lo pendiente. Se reintentará automáticamente.')
+      break
     }
-  } finally {
-    draining = false
   }
 }
 
