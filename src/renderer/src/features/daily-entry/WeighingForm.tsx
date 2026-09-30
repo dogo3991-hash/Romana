@@ -149,7 +149,7 @@ export function WeighingForm({
   })
 
   const { companyId } = useCompanyContext()
-  const { refetch: refetchLastGuia } = useLastGuia()
+  const { refetch: refetchLastGuia } = useLastGuia(companyId)
 
   const [autoWeighOn, setAutoWeighOn] = useState(false)
   const scale = useScaleReading()
@@ -211,7 +211,7 @@ export function WeighingForm({
     } else {
       reset({ ...emptyValues(), traslado: getLastTraslado(companyId) })
       // Trae de Supabase (no de una caché local) el último N° Guía guardado
-      // por cualquier PC, y propone el correlativo siguiente — el campo
+      // por cualquier PC para esta empresa, y propone el correlativo siguiente — el campo
       // sigue siendo editable por si no corresponde.
       refetchLastGuia().then(({ data }) => {
         if (data) setValue('n_guia', nextGuia(data))
