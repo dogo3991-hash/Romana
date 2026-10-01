@@ -7,3 +7,9 @@ out
 .env
 .env.local
 supabase/.temp
+*.tsbuildinfo
+nul
+graphify-out/
+.council/
+Reporte*.txt
+.claude/settings.local.json
