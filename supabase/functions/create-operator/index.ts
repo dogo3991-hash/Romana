@@ -26,8 +26,9 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    // Claves nuevas (sb_publishable_ / sb_secret_), para poder desactivar las legacy JWT
+    const anonKey = newApiKey('SUPABASE_PUBLISHABLE_KEYS') ?? Deno.env.get('SUPABASE_ANON_KEY')!
+    const serviceRoleKey = newApiKey('SUPABASE_SECRET_KEYS') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -109,6 +110,16 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: err instanceof Error ? err.message : 'Error inesperado' }, 500)
   }
 })
+
+// Supabase expone las claves nuevas como JSON { "<nombre>": "<clave>" }
+function newApiKey(envName: string): string | undefined {
+  try {
+    const keys = JSON.parse(Deno.env.get(envName) ?? '{}') as Record<string, string>
+    return keys.default ?? Object.values(keys)[0]
+  } catch {
+    return undefined
+  }
+}
 
 function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
