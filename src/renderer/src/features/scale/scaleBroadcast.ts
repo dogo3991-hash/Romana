@@ -17,6 +17,23 @@ const WEIGHT_EVENT = 'weight'
 // RESCAN_DELAY_MS en scaleSerial.ts.
 const RECONNECT_DELAY_MS = 3000
 
+// Límite generoso para cualquier romana de camiones; un valor fuera de rango es
+// basura o un mensaje forjado, nunca una lectura real.
+const MAX_WEIGHT_KG = 200_000
+
+function isValidPayload(payload: unknown): payload is RemoteScaleWeightPayload {
+  if (typeof payload !== 'object' || payload === null) return false
+  const { weightKg, raw } = payload as Record<string, unknown>
+  return (
+    typeof weightKg === 'number' &&
+    Number.isFinite(weightKg) &&
+    weightKg >= 0 &&
+    weightKg <= MAX_WEIGHT_KG &&
+    typeof raw === 'string' &&
+    raw.length <= 200
+  )
+}
+
 let channel: RealtimeChannel | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 const remoteWeightListeners = new Set<(payload: RemoteScaleWeightPayload) => void>()
@@ -49,10 +66,19 @@ function scheduleReconnect(): void {
 function getChannel(): RealtimeChannel {
   if (channel) return channel
   channel = supabase
-    .channel(CHANNEL_NAME, { config: { broadcast: { self: false, ack: false } } })
+    // Canal privado: solo operadores autenticados pueden escuchar o publicar
+    // (políticas sobre realtime.messages en la migración 0023).
+    .channel(CHANNEL_NAME, {
+      config: { private: true, broadcast: { self: false, ack: false } }
+    })
     .on('broadcast', { event: WEIGHT_EVENT }, ({ payload }) => {
+      if (!isValidPayload(payload)) return
       for (const listener of remoteWeightListeners) {
-        listener(payload as RemoteScaleWeightPayload)
+        try {
+          listener(payload)
+        } catch (err) {
+          log(`listener falló: ${err instanceof Error ? err.message : String(err)}`)
+        }
       }
     })
     .subscribe((status, err) => {

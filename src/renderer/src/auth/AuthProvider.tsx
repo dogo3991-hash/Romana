@@ -3,6 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@renderer/lib/supabaseClient'
 import { getOfflineDb } from '@renderer/lib/offlineDb'
 import { readThroughOne } from '@renderer/lib/offlineRepo'
+import { queryClient } from '@renderer/lib/queryClient'
+import { SELECTED_COMPANY_STORAGE_KEY } from '@renderer/features/companies/CompanyContext'
 import type { Database } from '@renderer/types/database.types'
 
 type Operator = Database['public']['Tables']['operators']['Row']
@@ -92,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }
 
   async function signOut(): Promise<void> {
+    await clearLocalUserData()
     await supabase.auth.signOut()
   }
 
@@ -109,6 +112,35 @@ export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider')
   return ctx
+}
+
+// En una PC compartida, la caché local del usuario anterior no debe quedar
+// visible para el siguiente (ej. un expectador restringido a una empresa que
+// queda offline vería lo que cacheó un operador sin restricción).
+// sync_queue NO se borra: son pesajes sin sincronizar y perderlos es peor;
+// la autoría la fija el servidor al subirlos (migración 0022).
+async function clearLocalUserData(): Promise<void> {
+  try {
+    const db = await getOfflineDb()
+    const stores = [
+      'weighings',
+      'trucks',
+      'conductors',
+      'transportistas',
+      'traslados',
+      'companies',
+      'operators'
+    ] as const
+    await Promise.all(stores.map((store) => db.clear(store)))
+  } catch (err) {
+    console.error('clearLocalUserData failed:', err)
+  }
+  try {
+    localStorage.removeItem(SELECTED_COMPANY_STORAGE_KEY)
+  } catch {
+    // localStorage no disponible — no es crítico
+  }
+  queryClient.clear()
 }
 
 function traducirError(message: string): string {

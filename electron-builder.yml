@@ -2,13 +2,12 @@ appId: com.slmbellavista.pesaje
 productName: SLM Bellavista Pesaje
 directories:
   buildResources: build
+# Allowlist: only the electron-vite build output and runtime resources are packed.
+# electron-builder adds package.json and production node_modules automatically.
+# Do not switch back to a '!'-only list: that makes electron-builder pack '**/*'.
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - 'out/**/*'
+  - 'resources/**/*'
 asarUnpack:
   - resources/**
 win:

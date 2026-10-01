@@ -87,22 +87,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: createError?.message ?? 'No se pudo crear el usuario' }, 400)
     }
 
-    // El trigger on_auth_user_created ya insertó la fila en operators.
-    // Si se pidió is_admin o is_viewer, la actualizamos (por defecto se crea
-    // como operador regular, sin ninguno de los dos).
-    if (payload.is_admin || payload.is_viewer) {
-      const { error: updateError } = await adminClient
-        .from('operators')
-        .update({
-          is_admin: !!payload.is_admin,
-          is_viewer: !!payload.is_viewer,
-          restricted_company_id: payload.is_viewer ? payload.restricted_company_id : null
-        })
-        .eq('id', created.user.id)
+    // El trigger on_auth_user_created ya insertó la fila en operators, inactiva
+    // (migración 0021). Acá la activamos y le asignamos el rol pedido.
+    const { error: updateError } = await adminClient
+      .from('operators')
+      .update({
+        active: true,
+        is_admin: !!payload.is_admin,
+        is_viewer: !!payload.is_viewer,
+        restricted_company_id: payload.is_viewer ? payload.restricted_company_id : null
+      })
+      .eq('id', created.user.id)
 
-      if (updateError) {
-        return jsonResponse({ error: updateError.message }, 400)
-      }
+    if (updateError) {
+      return jsonResponse({ error: updateError.message }, 400)
     }
 
     return jsonResponse({ id: created.user.id, email: created.user.email }, 200)

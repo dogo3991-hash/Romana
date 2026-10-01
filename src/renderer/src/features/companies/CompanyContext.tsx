@@ -1,7 +1,9 @@
 import { createContext, useContext, useState } from 'react'
 import { useCompanies } from './useCompanies'
 
-const STORAGE_KEY = 'slm-bellavista:selected-company-id'
+// eslint-disable-next-line react-refresh/only-export-components
+export const SELECTED_COMPANY_STORAGE_KEY = 'slm-bellavista:selected-company-id'
+const STORAGE_KEY = SELECTED_COMPANY_STORAGE_KEY
 
 interface CompanyContextValue {
   companyId: string | null
