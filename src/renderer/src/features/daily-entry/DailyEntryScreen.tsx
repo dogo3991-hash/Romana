@@ -22,6 +22,7 @@ import { useTransportistas } from '@renderer/features/conductors/useConductorsAd
 import { useCameraAlerts } from '@renderer/features/camera/useCameraAlerts'
 import { CameraPreview } from '@renderer/features/camera/CameraPreview'
 import { isLocalScaleConnected } from '@renderer/features/scale/scaleConnection'
+import { sendCameraMessage } from '@renderer/features/camera/cameraConnection'
 import { notifyError, notifyInfo } from '@renderer/components/ui/toast'
 import { getTicketPrinter } from '@renderer/lib/ticketPrinter'
 import pesajeIcon from '@renderer/assets/pesaje-icon.png'
@@ -146,6 +147,9 @@ export function DailyEntryScreen(): React.JSX.Element {
       if (wasPending && carga !== null && updated) {
         setTicketWeighing(updated)
         setTicketOpen(true)
+        // La cámara guarda la foto del camión que está en la romana como referencia
+        // de esta patente: así aprende a reconocer camiones nuevos.
+        sendCameraMessage({ type: 'weighing-completed', patente: updated.patente })
         window.api.printTicketAuto(updated.id, getTicketPrinter()).catch((err: unknown) => {
           notifyError(
             `No se pudo imprimir el ticket automáticamente (${err instanceof Error ? err.message : err}). Use el botón Imprimir.`

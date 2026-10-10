@@ -65,6 +65,11 @@ export function useCameraConnected(): boolean {
   )
 }
 
+// Envía un mensaje a SLM-Camara-Romana; si no está conectada, se descarta.
+export function sendCameraMessage(message: CameraMessage): void {
+  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
+}
+
 export function subscribeToCameraMessages(handler: MessageListener): () => void {
   messageListeners.add(handler)
   return () => messageListeners.delete(handler)
