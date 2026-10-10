@@ -87,6 +87,11 @@ function maybePublish(payload: ScaleWeightMessage): void {
 // lectura activa en el proceso main, ya que en ese caso simplemente no llegan eventos.
 window.api.scale.onStatus((payload) => setLocalStatus(payload.status))
 window.api.scale.onWeight((payload) => {
+  // El proceso main empieza a leer la báscula antes de que cargue esta pantalla, así
+  // que el aviso 'connected' (que se envía una sola vez, al cambiar) puede perderse.
+  // Si llegan tramas por el cable de este PC, la báscula está conectada acá; si
+  // después se corta, main avisa 'no-signal' y eso sí llega.
+  setLocalStatus('connected')
   for (const listener of weightListeners) listener(payload)
   maybePublish(payload)
 })
