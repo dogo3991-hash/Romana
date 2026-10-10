@@ -23,6 +23,7 @@ import { useCameraAlerts } from '@renderer/features/camera/useCameraAlerts'
 import { CameraPreview } from '@renderer/features/camera/CameraPreview'
 import { isLocalScaleConnected } from '@renderer/features/scale/scaleConnection'
 import { notifyError, notifyInfo } from '@renderer/components/ui/toast'
+import { getTicketPrinter } from '@renderer/lib/ticketPrinter'
 import pesajeIcon from '@renderer/assets/pesaje-icon.png'
 import type { Database } from '@renderer/types/database.types'
 
@@ -145,6 +146,11 @@ export function DailyEntryScreen(): React.JSX.Element {
       if (wasPending && carga !== null && updated) {
         setTicketWeighing(updated)
         setTicketOpen(true)
+        window.api.printTicketAuto(updated.id, getTicketPrinter()).catch((err: unknown) => {
+          notifyError(
+            `No se pudo imprimir el ticket automáticamente (${err instanceof Error ? err.message : err}). Use el botón Imprimir.`
+          )
+        })
       }
     } else {
       await createMutation.mutateAsync({

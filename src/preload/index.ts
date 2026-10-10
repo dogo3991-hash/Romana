@@ -14,6 +14,10 @@ const api = {
     ipcRenderer.invoke('print-ticket-pdf', weighingId),
   printTicketDirect: (weighingId: string): Promise<void> =>
     ipcRenderer.invoke('print-ticket-direct', weighingId),
+  printTicketAuto: (weighingId: string, deviceName: string | null): Promise<void> =>
+    ipcRenderer.invoke('print-ticket-auto', weighingId, deviceName),
+  listPrinters: (): Promise<{ name: string; displayName: string }[]> =>
+    ipcRenderer.invoke('list-printers'),
   notifyPrintReady: (): void => {
     ipcRenderer.send('ticket-print-ready')
   },

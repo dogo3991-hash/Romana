@@ -46,6 +46,26 @@ function playTruckAlertSound(): void {
   }
 }
 
+// Cuando la cámara duda entre dos camiones, el aviso muestra ambas patentes y
+// cuál de ellas tiene un pesaje en espera, para ayudar a completarlo a mano.
+function unrecognizedMessage(candidates: unknown, pending: Weighing[]): string {
+  const plates = Array.isArray(candidates)
+    ? candidates.filter((c): c is string => typeof c === 'string')
+    : []
+  if (plates.length === 0) {
+    return 'La cámara no pudo reconocer el camión: complete el pesaje manualmente.'
+  }
+  const pendingPlates = new Set(pending.map((w) => normalizePatente(w.patente)))
+  const withPending = plates.filter((p) => pendingPlates.has(normalizePatente(p)))
+  const hint =
+    withPending.length === 1
+      ? ` Solo ${withPending[0]} tiene un pesaje en espera.`
+      : withPending.length === 0
+        ? ' Ninguna tiene un pesaje en espera.'
+        : ''
+  return `La cámara no pudo reconocer el camión: ¿${plates.join(' o ')}?${hint} Complete el pesaje manualmente.`
+}
+
 /**
  * Reacciona a los eventos de SLM-Camara-Romana (proyecto separado, ver isolate-risky-features)
  * usando la conexión WebSocket compartida (cameraConnection.ts). Si ese proceso no está
@@ -86,7 +106,7 @@ export function useCameraAlerts(
         if (weighing) startAutoWeighRef.current(weighing)
         else notifyInfo(`La cámara reconoció ${payload.plate}, pero no tiene un pesaje en espera.`)
       } else if (payload.type === 'truck-unrecognized') {
-        notifyInfo('La cámara no pudo reconocer el camión: complete el pesaje manualmente.')
+        notifyInfo(unrecognizedMessage(payload.candidates, pendingRef.current), { sticky: true })
       }
     })
   }, [])

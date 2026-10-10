@@ -78,7 +78,10 @@ async function createReadyTicketPrintWindow(weighingId: string): Promise<Browser
       // Mas largo que el timeout de fetch del cliente de Supabase (15s): si la
       // conectividad recien se corto y todavia no se detecto, la primera
       // lectura offline puede tardar hasta ese tiempo en caer al dato local.
-      const timeout = setTimeout(() => finish(() => reject(new Error('Tiempo de espera agotado'))), 20000)
+      const timeout = setTimeout(
+        () => finish(() => reject(new Error('Tiempo de espera agotado'))),
+        20000
+      )
 
       function finish(action: () => void): void {
         clearTimeout(timeout)
@@ -135,6 +138,42 @@ async function handlePrintTicketDirect(
   try {
     await new Promise<void>((resolve) => {
       printWindow.webContents.print({ printBackground: true }, () => resolve())
+    })
+  } finally {
+    printWindow.destroy()
+  }
+}
+
+// Al completar un pesaje el ticket se imprime solo, sin diálogo, en la impresora
+// predeterminada del PC: 3 copias en blanco y negro.
+const AUTO_PRINT_COPIES = 3
+
+async function handlePrintTicketAuto(
+  event: Electron.IpcMainInvokeEvent,
+  weighingId: string,
+  // Impresora elegida en la ventana del ticket; null = la predeterminada de Windows.
+  deviceName: string | null
+): Promise<void> {
+  if (deviceName) {
+    const printers = await event.sender.getPrintersAsync()
+    if (!printers.some((p) => p.name === deviceName)) {
+      throw new Error(`la impresora "${deviceName}" no está disponible`)
+    }
+  }
+  const printWindow = await createReadyTicketPrintWindow(weighingId)
+  try {
+    await new Promise<void>((resolve, reject) => {
+      printWindow.webContents.print(
+        {
+          silent: true,
+          copies: AUTO_PRINT_COPIES,
+          color: false,
+          printBackground: true,
+          ...(deviceName ? { deviceName } : {})
+        },
+        (success, failureReason) =>
+          success ? resolve() : reject(new Error(failureReason || 'la impresora no respondió'))
+      )
     })
   } finally {
     printWindow.destroy()
@@ -199,6 +238,13 @@ app.whenReady().then(() => {
   ipcMain.handle('save-file', handleSaveFile)
   ipcMain.handle('print-ticket-pdf', handlePrintTicketPdf)
   ipcMain.handle('print-ticket-direct', handlePrintTicketDirect)
+  ipcMain.handle('print-ticket-auto', handlePrintTicketAuto)
+  ipcMain.handle('list-printers', async (event) =>
+    (await event.sender.getPrintersAsync()).map((p) => ({
+      name: p.name,
+      displayName: p.displayName || p.name
+    }))
+  )
   ipcMain.handle('open-path', (_event, filePath: string) => shell.openPath(filePath))
   ipcMain.handle('camera-process:start', () => startCameraProcess())
   ipcMain.handle('camera-process:stop', () => stopCameraProcess())

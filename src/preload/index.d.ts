@@ -9,6 +9,10 @@ interface Api {
   ) => Promise<{ canceled: boolean; filePath?: string }>
   printTicketPdf: (weighingId: string) => Promise<ArrayBuffer>
   printTicketDirect: (weighingId: string) => Promise<void>
+  // Impresión sin diálogo: 3 copias en blanco y negro en la impresora predeterminada.
+  // deviceName null = la impresora predeterminada de Windows.
+  printTicketAuto: (weighingId: string, deviceName: string | null) => Promise<void>
+  listPrinters: () => Promise<{ name: string; displayName: string }[]>
   notifyPrintReady: () => void
   notifyPrintError: (message: string) => void
   openPath: (filePath: string) => Promise<string>

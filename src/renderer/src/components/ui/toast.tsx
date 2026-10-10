@@ -23,16 +23,17 @@ export function notifyError(message: string): void {
 }
 
 // Aviso informativo (no es un error): ej. lo que hizo el pesaje automático.
+// sticky = queda en pantalla hasta cerrarlo con la ✕.
 // eslint-disable-next-line react-refresh/only-export-components
-export function notifyInfo(message: string): void {
-  pushToast(message, 'info')
+export function notifyInfo(message: string, options: { sticky?: boolean } = {}): void {
+  pushToast(message, 'info', options.sticky)
 }
 
-function pushToast(message: string, tone: ToastItem['tone']): void {
+function pushToast(message: string, tone: ToastItem['tone'], sticky = false): void {
   const id = nextId++
   toasts = [...toasts, { id, message, tone }]
   emitChange()
-  setTimeout(() => dismissToast(id), DISMISS_MS)
+  if (!sticky) setTimeout(() => dismissToast(id), DISMISS_MS)
 }
 
 function dismissToast(id: number): void {

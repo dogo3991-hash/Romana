@@ -1,14 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog'
 import { Button } from '@renderer/components/ui/button'
 import {
   useTransportistas,
   useConductorsByTransportista
 } from '@renderer/features/conductors/useConductorsAdmin'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@renderer/components/ui/select'
+import { getTicketPrinter, setTicketPrinter } from '@renderer/lib/ticketPrinter'
 import { TicketDocument } from './TicketDocument'
 import type { Database } from '@renderer/types/database.types'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
+
+// Valor del selector para "usar la impresora predeterminada de Windows".
+const DEFAULT_PRINTER = '__predeterminada__'
 
 interface WeighingTicketProps {
   open: boolean
@@ -26,6 +37,21 @@ export function WeighingTicket({
   const [saving, setSaving] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [printers, setPrinters] = useState<{ name: string; displayName: string }[]>([])
+  const [autoPrinter, setAutoPrinter] = useState<string>(getTicketPrinter() ?? DEFAULT_PRINTER)
+
+  useEffect(() => {
+    if (!open) return
+    window.api
+      .listPrinters()
+      .then(setPrinters)
+      .catch(() => setPrinters([]))
+  }, [open])
+
+  function handleAutoPrinterChange(value: string): void {
+    setAutoPrinter(value)
+    setTicketPrinter(value === DEFAULT_PRINTER ? null : value)
+  }
 
   if (!weighing) return <></>
 
@@ -80,6 +106,28 @@ export function WeighingTicket({
         />
 
         {error && <p className="text-sm text-danger">{error}</p>}
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-muted">
+            Impresora para tickets automáticos (3 copias, blanco y negro)
+          </label>
+          <Select value={autoPrinter} onValueChange={handleAutoPrinterChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={DEFAULT_PRINTER}>Predeterminada de Windows</SelectItem>
+              {printers.map((p) => (
+                <SelectItem key={p.name} value={p.name}>
+                  {p.displayName}
+                </SelectItem>
+              ))}
+              {autoPrinter !== DEFAULT_PRINTER && !printers.some((p) => p.name === autoPrinter) && (
+                <SelectItem value={autoPrinter}>{autoPrinter} (no disponible)</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="mt-2 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
