@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { Database } from '@renderer/types/database.types'
-import { matchPatente } from './matchPatente'
+import { matchPatente, normalizePatente } from './matchPatente'
+import { notifyInfo } from '@renderer/components/ui/toast'
 import { subscribeToCameraMessages, type CameraMessage } from './cameraConnection'
 import truckAlertSound from '@renderer/assets/truck-alert.ogg'
 
@@ -51,14 +52,21 @@ function playTruckAlertSound(): void {
  * corriendo, simplemente no llegan mensajes — la función es aditiva y nunca bloquea el
  * flujo normal de pesaje.
  */
-export function useCameraAlerts(pending: Weighing[], openEdit: (w: Weighing) => void): void {
+export function useCameraAlerts(
+  pending: Weighing[],
+  openEdit: (w: Weighing) => void,
+  // Pesaje automático: la cámara reconoció un camión que tiene un pesaje en espera.
+  startAutoWeigh: (w: Weighing) => void
+): void {
   const pendingRef = useRef(pending)
   const openEditRef = useRef(openEdit)
+  const startAutoWeighRef = useRef(startAutoWeigh)
 
   useEffect(() => {
     pendingRef.current = pending
     openEditRef.current = openEdit
-  }, [pending, openEdit])
+    startAutoWeighRef.current = startAutoWeigh
+  }, [pending, openEdit, startAutoWeigh])
 
   useEffect(() => {
     return subscribeToCameraMessages((payload: CameraMessage) => {
@@ -72,6 +80,13 @@ export function useCameraAlerts(pending: Weighing[], openEdit: (w: Weighing) => 
           const weighing = pendingRef.current.find((w) => w.patente === match)
           if (weighing) openEditRef.current(weighing)
         }
+      } else if (payload.type === 'truck-identified' && typeof payload.plate === 'string') {
+        const plate = normalizePatente(payload.plate)
+        const weighing = pendingRef.current.find((w) => normalizePatente(w.patente) === plate)
+        if (weighing) startAutoWeighRef.current(weighing)
+        else notifyInfo(`La cámara reconoció ${payload.plate}, pero no tiene un pesaje en espera.`)
+      } else if (payload.type === 'truck-unrecognized') {
+        notifyInfo('La cámara no pudo reconocer el camión: complete el pesaje manualmente.')
       }
     })
   }, [])

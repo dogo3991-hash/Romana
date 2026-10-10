@@ -19,7 +19,7 @@ function levenshtein(a: string, b: string): number {
   return row[n]
 }
 
-function normalize(patente: string): string {
+export function normalizePatente(patente: string): string {
   return patente.toUpperCase().replace(/[^A-Z0-9]/g, '')
 }
 
@@ -42,11 +42,14 @@ export function matchPatente(
   const maxDistance = options.maxDistance ?? 2
   const minMargin = options.minMargin ?? 2
 
-  const normalizedOcr = normalize(ocrText)
+  const normalizedOcr = normalizePatente(ocrText)
   if (!normalizedOcr || candidates.length === 0) return null
 
   const scored = candidates
-    .map((patente) => ({ patente, distance: levenshtein(normalizedOcr, normalize(patente)) }))
+    .map((patente) => ({
+      patente,
+      distance: levenshtein(normalizedOcr, normalizePatente(patente))
+    }))
     .sort((a, b) => a.distance - b.distance)
 
   const best = scored[0]

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -30,6 +30,21 @@ import { getTruckColor, truckColorCssValue } from '@renderer/lib/truckColors'
 import type { Database } from '@renderer/types/database.types'
 
 type Weighing = Database['public']['Tables']['weighings']['Row']
+
+// Pesaje automático (cuando la cámara reconoce el camión): el peso se considera
+// estable si durante STABLE_WINDOW_MS todas las lecturas quedan dentro de
+// STABLE_TOLERANCE_KG; entonces corre una cuenta regresiva cancelable y se guarda.
+const STABLE_WINDOW_MS = 3000
+const STABLE_TOLERANCE_KG = 40
+const AUTO_SAVE_COUNTDOWN_S = 5
+
+type AutoSaveState = 'waiting' | 'countdown' | 'saving' | 'cancelled'
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
 
 const PRODUCTOS = ['Min. Bellavista Open 1', 'Min. Bellavista Open 2', 'Gravilla', 'Otro']
 
@@ -83,6 +98,8 @@ interface WeighingFormProps {
   // de tipeo); mantiene peso_bruto/hora_salida bloqueados y no propone hora
   // de salida, para no invitar a completar el pesaje desde este modo.
   lockWeight?: boolean
+  // Abierto por la cámara: guardar solo al quedar estable el peso (ver arriba).
+  autoComplete?: boolean
 }
 
 function nowHHMM(): string {
@@ -133,7 +150,8 @@ export function WeighingForm({
   submitting,
   pendingConductors,
   pendingPatentes,
-  lockWeight = false
+  lockWeight = false,
+  autoComplete = false
 }: WeighingFormProps): React.JSX.Element {
   const {
     register,
@@ -141,6 +159,7 @@ export function WeighingForm({
     reset,
     control,
     setValue,
+    getValues,
     watch,
     formState: { errors }
   } = useForm<WeighingFormInput, unknown, WeighingFormValues>({
@@ -218,6 +237,70 @@ export function WeighingForm({
       })
     }
   }, [open, editing, reset, setValue, refetchLastGuia, companyId, lockWeight])
+
+  // ---------- pesaje automático ----------
+  const [autoSave, setAutoSave] = useState<AutoSaveState>('waiting')
+  const [stableWeight, setStableWeight] = useState<number | null>(null)
+  const [secondsLeft, setSecondsLeft] = useState(AUTO_SAVE_COUNTDOWN_S)
+  const readingsRef = useRef<{ t: number; kg: number }[]>([])
+  const autoSaveActive =
+    open && autoComplete && (autoSave === 'waiting' || autoSave === 'countdown')
+
+  // Al abrirse por la cámara, prende la lectura en vivo de la báscula.
+  useEffect(() => {
+    if (!open || !autoComplete) return
+    readingsRef.current = []
+    setStableWeight(null)
+    setAutoSave('waiting')
+    setAutoWeighOn(true)
+    scale.start()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoComplete])
+
+  // Vigila si el peso está estable y por encima de la tara.
+  useEffect(() => {
+    if (!autoSaveActive) return
+    return subscribeToScaleWeight(({ weightKg }) => {
+      const now = Date.now()
+      const readings = readingsRef.current
+      readings.push({ t: now, kg: weightKg })
+      while (readings.length && now - readings[0].t > STABLE_WINDOW_MS) readings.shift()
+      const values = readings.map((r) => r.kg)
+      const covered = now - readings[0].t >= STABLE_WINDOW_MS - 500
+      const steady = Math.max(...values) - Math.min(...values) <= STABLE_TOLERANCE_KG
+      const kg = Math.round(median(values))
+      const taraKg = Number(getValues('tara')) || 0
+      setStableWeight(covered && steady && kg > taraKg ? kg : null)
+    })
+  }, [autoSaveActive, getValues])
+
+  // Peso estable -> cuenta regresiva; si el peso se mueve, vuelve a esperar.
+  useEffect(() => {
+    if (!autoSaveActive) return
+    if (stableWeight === null) {
+      if (autoSave === 'countdown') setAutoSave('waiting')
+      return
+    }
+    if (autoSave === 'waiting') {
+      setSecondsLeft(AUTO_SAVE_COUNTDOWN_S)
+      setAutoSave('countdown')
+    }
+  }, [autoSaveActive, stableWeight, autoSave])
+
+  useEffect(() => {
+    if (!autoSaveActive || autoSave !== 'countdown') return
+    if (secondsLeft <= 0) {
+      // Se guarda el peso estable (mediana), no la última lectura suelta.
+      setValue('peso_bruto', stableWeight ?? 0, { shouldValidate: true })
+      setAutoWeighOn(false)
+      setAutoSave('saving')
+      void handleSubmit(submit, () => setAutoSave('cancelled'))()
+      return
+    }
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSaveActive, autoSave, secondsLeft])
   const { data: transportistas } = useTransportistas()
   const transportistaId = watch('transportista_id')
   const { data: conductors } = useConductorsByTransportista(transportistaId || null)
@@ -290,6 +373,16 @@ export function WeighingForm({
                   : 'Editar pesaje'}
           </DialogTitle>
         </DialogHeader>
+
+        {open && autoComplete && editing && (
+          <AutoSaveBanner
+            patente={editing.patente}
+            state={autoSave}
+            secondsLeft={secondsLeft}
+            weightKg={stableWeight}
+            onCancel={() => setAutoSave('cancelled')}
+          />
+        )}
 
         <form onSubmit={handleSubmit(submit)} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
@@ -536,6 +629,47 @@ export function WeighingForm({
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function AutoSaveBanner({
+  patente,
+  state,
+  secondsLeft,
+  weightKg,
+  onCancel
+}: {
+  patente: string
+  state: AutoSaveState
+  secondsLeft: number
+  weightKg: number | null
+  onCancel: () => void
+}): React.JSX.Element {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between gap-4 rounded-md border-2 px-4 py-3',
+        state === 'countdown' ? 'border-primary bg-primary/10' : 'border-line bg-surface'
+      )}
+    >
+      <div className="flex flex-col">
+        <span className="text-sm font-semibold text-ink">
+          Pesaje automático — {patente} reconocido por la cámara
+        </span>
+        <span className="text-sm text-muted">
+          {state === 'waiting' && 'Esperando que el peso quede estable...'}
+          {state === 'countdown' &&
+            `Guardando ${weightKg?.toLocaleString('es-CL')} kg en ${secondsLeft} s...`}
+          {state === 'saving' && `Guardando ${weightKg?.toLocaleString('es-CL')} kg...`}
+          {state === 'cancelled' && 'Pesaje automático cancelado: complete y guarde manualmente.'}
+        </span>
+      </div>
+      {(state === 'waiting' || state === 'countdown') && (
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+      )}
+    </div>
   )
 }
 

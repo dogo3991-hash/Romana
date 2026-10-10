@@ -1,8 +1,10 @@
 import { useSyncExternalStore } from 'react'
+import { cn } from '@renderer/lib/utils'
 
 interface ToastItem {
   id: number
   message: string
+  tone: 'error' | 'info'
 }
 
 const DISMISS_MS = 5000
@@ -17,8 +19,18 @@ function emitChange(): void {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function notifyError(message: string): void {
+  pushToast(message, 'error')
+}
+
+// Aviso informativo (no es un error): ej. lo que hizo el pesaje automático.
+// eslint-disable-next-line react-refresh/only-export-components
+export function notifyInfo(message: string): void {
+  pushToast(message, 'info')
+}
+
+function pushToast(message: string, tone: ToastItem['tone']): void {
   const id = nextId++
-  toasts = [...toasts, { id, message }]
+  toasts = [...toasts, { id, message, tone }]
   emitChange()
   setTimeout(() => dismissToast(id), DISMISS_MS)
 }
@@ -45,7 +57,10 @@ export function ToastViewport(): React.JSX.Element {
       {items.map((t) => (
         <div
           key={t.id}
-          className="flex items-start gap-2 rounded-md border border-line bg-surface px-4 py-3 text-sm text-danger shadow-lg"
+          className={cn(
+            'flex items-start gap-2 rounded-md border border-line bg-surface px-4 py-3 text-sm shadow-lg',
+            t.tone === 'error' ? 'text-danger' : 'text-ink'
+          )}
         >
           <span className="flex-1">{t.message}</span>
           <button

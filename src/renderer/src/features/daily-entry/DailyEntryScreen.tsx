@@ -21,6 +21,8 @@ import { ConfirmDialog } from '@renderer/components/ui/confirm-dialog'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
 import { useCameraAlerts } from '@renderer/features/camera/useCameraAlerts'
 import { CameraPreview } from '@renderer/features/camera/CameraPreview'
+import { isLocalScaleConnected } from '@renderer/features/scale/scaleConnection'
+import { notifyError, notifyInfo } from '@renderer/components/ui/toast'
 import pesajeIcon from '@renderer/assets/pesaje-icon.png'
 import type { Database } from '@renderer/types/database.types'
 
@@ -34,6 +36,9 @@ export function DailyEntryScreen(): React.JSX.Element {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Weighing | null>(null)
   const [lockWeight, setLockWeight] = useState(false)
+  // El formulario se abrió solo porque la cámara reconoció el camión: se guarda
+  // automáticamente cuando el peso queda estable (con cuenta regresiva cancelable).
+  const [autoComplete, setAutoComplete] = useState(false)
   const [ticketWeighing, setTicketWeighing] = useState<Weighing | null>(null)
   const [ticketOpen, setTicketOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -50,7 +55,7 @@ export function DailyEntryScreen(): React.JSX.Element {
   const pending = weighings?.filter((w) => w.carga === null) ?? []
   const completed = (weighings?.filter((w) => w.carga !== null) ?? []).slice().reverse()
 
-  useCameraAlerts(pending, openEdit)
+  useCameraAlerts(pending, openEdit, startAutoWeigh)
 
   const createMutation = useCreateWeighing(companyId, fecha)
   const updateMutation = useUpdateWeighing(companyId, fecha)
@@ -58,19 +63,51 @@ export function DailyEntryScreen(): React.JSX.Element {
 
   function openNew(): void {
     setEditing(null)
+    setAutoComplete(false)
     setFormOpen(true)
   }
 
   function openEdit(w: Weighing): void {
     setEditing(w)
     setLockWeight(false)
+    setAutoComplete(false)
     setFormOpen(true)
   }
 
   function openEditData(w: Weighing): void {
     setEditing(w)
     setLockWeight(true)
+    setAutoComplete(false)
     setFormOpen(true)
+  }
+
+  function startAutoWeigh(w: Weighing): void {
+    if (isViewer) return
+    if (fecha !== format(new Date(), 'yyyy-MM-dd')) {
+      notifyInfo(
+        `La cámara reconoció ${w.patente}: cambie la fecha a hoy para el pesaje automático.`
+      )
+      return
+    }
+    // Nunca se interrumpe algo que el operador esté haciendo.
+    if (formOpen) {
+      notifyInfo(`La cámara reconoció ${w.patente}, pero hay un formulario abierto.`)
+      return
+    }
+    // Solo el PC con la báscula conectada completa pesajes automáticamente.
+    if (!isLocalScaleConnected()) {
+      notifyInfo(`La cámara reconoció ${w.patente}: complete el pesaje en el PC de la romana.`)
+      return
+    }
+    setEditing(w)
+    setLockWeight(false)
+    setAutoComplete(true)
+    setFormOpen(true)
+  }
+
+  function handleFormOpenChange(open: boolean): void {
+    setFormOpen(open)
+    if (!open) setAutoComplete(false)
   }
 
   async function handleSubmit(values: WeighingFormValues): Promise<void> {
@@ -90,6 +127,16 @@ export function DailyEntryScreen(): React.JSX.Element {
       traslado: values.traslado || null
     }
 
+    if (editing && autoComplete) {
+      // Otro PC pudo haberlo completado mientras se esperaba el peso estable.
+      const current = weighings?.find((w) => w.id === editing.id)
+      if (!current || current.carga !== null) {
+        notifyError(`El pesaje de ${editing.patente} ya fue completado en otro PC.`)
+        handleFormOpenChange(false)
+        return
+      }
+    }
+
     if (editing) {
       const wasPending = editing.carga === null
       const updated = await updateMutation.mutateAsync({ id: editing.id, values: payload })
@@ -107,7 +154,7 @@ export function DailyEntryScreen(): React.JSX.Element {
         ...payload
       })
     }
-    setFormOpen(false)
+    handleFormOpenChange(false)
   }
 
   function openTicket(w: Weighing): void {
@@ -321,11 +368,7 @@ export function DailyEntryScreen(): React.JSX.Element {
                           <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteTarget(w.id)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(w.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </>
@@ -341,13 +384,14 @@ export function DailyEntryScreen(): React.JSX.Element {
 
       <WeighingForm
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={handleFormOpenChange}
         onSubmit={handleSubmit}
         editing={editing}
         submitting={createMutation.isPending || updateMutation.isPending}
         pendingConductors={pending.map((w) => w.conductor)}
         pendingPatentes={pending.map((w) => w.patente)}
         lockWeight={lockWeight}
+        autoComplete={autoComplete}
       />
 
       <WeighingTicket open={ticketOpen} onOpenChange={setTicketOpen} weighing={ticketWeighing} />

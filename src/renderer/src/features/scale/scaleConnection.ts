@@ -99,6 +99,13 @@ subscribeToRemoteWeight((payload) => {
   armRemoteWatchdog()
 })
 
+// true solo si la báscula está conectada por cable a ESTE PC (no la lectura que
+// llega de otro PC por Supabase). El pesaje automático solo completa pesajes en ese
+// PC, para que dos PCs no completen el mismo pesaje a la vez.
+export function isLocalScaleConnected(): boolean {
+  return localStatus === 'connected'
+}
+
 export function useScaleStatus(): ScaleStatus | null {
   return useSyncExternalStore(
     (listener) => {
