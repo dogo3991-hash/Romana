@@ -158,9 +158,9 @@ export function DailyEntryScreen(): React.JSX.Element {
           setTicketOpen(true)
         }
         const autoPrint = isAutoPrintEnabled()
-        // En el pesaje automático con impresión automática no hace falta ver el
-        // ticket: nadie está frente al PC. Si la impresión falla, sí se muestra.
-        if (!(autoComplete && autoPrint)) showTicket()
+        // Con la impresión automática encendida el ticket ya sale impreso: no se
+        // abre (manual o automático). Se muestra si está apagada o si falla.
+        if (!autoPrint) showTicket()
         // La cámara guarda la foto del camión que está en la romana como referencia
         // de esta patente: así aprende a reconocer camiones nuevos.
         sendCameraMessage({ type: 'weighing-completed', patente: updated.patente })
