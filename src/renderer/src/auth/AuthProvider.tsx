@@ -45,8 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     return () => subscription.subscription.unsubscribe()
   }, [])
 
+  // Supabase entrega una sesión nueva en cada renovación del token (y a veces al
+  // volver el foco a la ventana) aunque el usuario sea el mismo. Recargar el perfil
+  // en cada una mostraba "Cargando..." y desmontaba toda la pantalla, cerrando un
+  // formulario abierto (ej. el del pesaje automático). Solo se recarga si cambia
+  // el usuario.
+  const userId = session?.user.id ?? null
+
   useEffect(() => {
-    if (!session) return
+    if (!userId) return
 
     let cancelled = false
 
@@ -55,10 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       setAuthError(null)
       try {
         const data = await readThroughOne<Operator>({
-          remote: () => supabase.from('operators').select('*').eq('id', session!.user.id).single(),
+          remote: () => supabase.from('operators').select('*').eq('id', userId!).single(),
           readLocal: async () => {
             const db = await getOfflineDb()
-            return (await db.get('operators', session!.user.id)) ?? null
+            return (await db.get('operators', userId!)) ?? null
           },
           writeLocal: async (row) => {
             const db = await getOfflineDb()
@@ -82,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     return () => {
       cancelled = true
     }
-  }, [session, retryCount])
+  }, [userId, retryCount])
 
   function retryLoadOperator(): void {
     setRetryCount((c) => c + 1)
