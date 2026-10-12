@@ -9,8 +9,9 @@ export interface ScaleWeightMessage {
 
 // Por debajo de este umbral se considera "báscula vacía" (sin camión encima): no se
 // publica nada a Supabase para no gastar cuota de mensajes/mes en horas sin nadie
-// pesando. Puesto arbitrariamente por encima del ruido de calibración esperado en 0 kg.
-const PUBLISH_WEIGHT_THRESHOLD_KG = 5
+// pesando. 500 kg deja fuera los pesos fantasma (viento, un perro sobre la romana)
+// y queda muy por debajo de la tara de cualquier camión.
+const PUBLISH_WEIGHT_THRESHOLD_KG = 500
 // Frecuencia máxima de publicación mientras hay un peso activo por encima del umbral.
 const MIN_PUBLISH_INTERVAL_MS = 300
 // Igual publica sin cambios cada tanto mientras hay un peso activo, para que el
@@ -62,9 +63,11 @@ function maybePublish(payload: ScaleWeightMessage): void {
   if (!isAboveThreshold) {
     if (publishSessionActive) {
       // Último mensaje de la sesión, para que los PCs remotos reflejen la vuelta a 0.
-      publishWeight(payload)
+      // Bajo el umbral la báscula se considera vacía: se manda 0 y no el resto (ej.
+      // 430 kg mientras el camión termina de bajar), que quedaría fijo en los remotos.
+      publishWeight({ ...payload, weightKg: 0 })
       lastPublishAt = now
-      lastPublishedWeightKg = payload.weightKg
+      lastPublishedWeightKg = 0
       publishSessionActive = false
     }
     return
