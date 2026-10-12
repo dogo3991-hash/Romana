@@ -37,6 +37,9 @@ type Weighing = Database['public']['Tables']['weighings']['Row']
 const STABLE_WINDOW_MS = 3000
 const STABLE_TOLERANCE_KG = 40
 const AUTO_SAVE_COUNTDOWN_S = 5
+// Con el camión quieto, el peso que llega de otro PC se repite cada 2,5 s
+// (HEARTBEAT_INTERVAL_MS en scaleConnection.ts): más que esto sin lecturas es un corte.
+const READINGS_SILENCE_MS = 4000
 
 type AutoSaveState = 'waiting' | 'countdown' | 'saving' | 'cancelled'
 
@@ -260,11 +263,25 @@ export function WeighingForm({
   // Vigila si el peso está estable y por encima de la tara.
   useEffect(() => {
     if (!autoSaveActive) return
-    return subscribeToScaleWeight(({ weightKg }) => {
+    // Si dejan de llegar lecturas (se cortó la romana, o el PC de la romana o internet
+    // cuando el peso llega desde otro PC), no se guarda el último peso visto.
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null
+    const armSilenceTimer = (): void => {
+      if (silenceTimer) clearTimeout(silenceTimer)
+      silenceTimer = setTimeout(() => {
+        readingsRef.current = []
+        setStableWeight(null)
+      }, READINGS_SILENCE_MS)
+    }
+    armSilenceTimer()
+    const unsubscribe = subscribeToScaleWeight(({ weightKg }) => {
+      armSilenceTimer()
       const now = Date.now()
       const readings = readingsRef.current
       readings.push({ t: now, kg: weightKg })
-      while (readings.length && now - readings[0].t > STABLE_WINDOW_MS) readings.shift()
+      // Se conserva la lectura que abre la ventana: el peso que llega de otro PC sin
+      // cambios viene cada 2,5 s, y sin ella la ventana casi nunca quedaría cubierta.
+      while (readings.length > 1 && now - readings[1].t >= STABLE_WINDOW_MS) readings.shift()
       const values = readings.map((r) => r.kg)
       const covered = now - readings[0].t >= STABLE_WINDOW_MS - 500
       const steady = Math.max(...values) - Math.min(...values) <= STABLE_TOLERANCE_KG
@@ -272,6 +289,10 @@ export function WeighingForm({
       const taraKg = Number(getValues('tara')) || 0
       setStableWeight(covered && steady && kg > taraKg ? kg : null)
     })
+    return () => {
+      if (silenceTimer) clearTimeout(silenceTimer)
+      unsubscribe()
+    }
   }, [autoSaveActive, getValues])
 
   // Peso estable -> cuenta regresiva; si el peso se mueve, vuelve a esperar.

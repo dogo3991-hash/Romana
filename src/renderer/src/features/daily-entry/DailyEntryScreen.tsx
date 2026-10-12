@@ -21,8 +21,9 @@ import { ConfirmDialog } from '@renderer/components/ui/confirm-dialog'
 import { useTransportistas } from '@renderer/features/conductors/useConductorsAdmin'
 import { useCameraAlerts } from '@renderer/features/camera/useCameraAlerts'
 import { CameraPreview } from '@renderer/features/camera/CameraPreview'
-import { isLocalScaleConnected } from '@renderer/features/scale/scaleConnection'
+import { hasLiveWeight } from '@renderer/features/scale/scaleConnection'
 import { sendCameraMessage } from '@renderer/features/camera/cameraConnection'
+import { holdsLock } from '@renderer/features/camera/autoWeighLock'
 import { notifyError, notifyInfo } from '@renderer/components/ui/toast'
 import { getTicketPrinter } from '@renderer/lib/ticketPrinter'
 import pesajeIcon from '@renderer/assets/pesaje-icon.png'
@@ -96,9 +97,16 @@ export function DailyEntryScreen(): React.JSX.Element {
       notifyInfo(`La cámara reconoció ${w.patente}, pero hay un formulario abierto.`)
       return
     }
-    // Solo el PC con la báscula conectada completa pesajes automáticamente.
-    if (!isLocalScaleConnected()) {
-      notifyInfo(`La cámara reconoció ${w.patente}: complete el pesaje en el PC de la romana.`)
+    // Solo el PC con el turno del pesaje automático lo completa (ver autoWeighLock),
+    // para que dos PCs no completen el mismo pesaje a la vez.
+    if (!holdsLock()) {
+      notifyInfo(`La cámara reconoció ${w.patente}, pero este PC no tiene el pesaje automático.`)
+      return
+    }
+    if (!hasLiveWeight()) {
+      notifyInfo(
+        `La cámara reconoció ${w.patente}, pero no llega el peso de la romana: complete el pesaje manualmente.`
+      )
       return
     }
     setEditing(w)

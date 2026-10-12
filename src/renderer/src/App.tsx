@@ -15,6 +15,7 @@ import { ConductorsScreen } from '@renderer/features/conductors/ConductorsScreen
 import { TrucksScreen } from '@renderer/features/trucks/TrucksScreen'
 import { TicketPrintPage } from '@renderer/features/daily-entry/TicketPrintPage'
 import { useWeighingsRealtimeSync } from '@renderer/features/daily-entry/useWeighingsRealtimeSync'
+import { useAutoWeighLock } from '@renderer/features/camera/useAutoWeighLock'
 import { AboutScreen } from '@renderer/features/about/AboutScreen'
 import { ToastViewport } from '@renderer/components/ui/toast'
 
@@ -28,6 +29,7 @@ function MainApp(): React.JSX.Element {
 
 function AuthenticatedApp(): React.JSX.Element {
   useWeighingsRealtimeSync()
+  useAutoWeighLock()
 
   return (
     <CompanyProvider>
