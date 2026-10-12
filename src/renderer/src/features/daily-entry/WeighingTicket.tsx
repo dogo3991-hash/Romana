@@ -12,7 +12,12 @@ import {
   SelectTrigger,
   SelectValue
 } from '@renderer/components/ui/select'
-import { getTicketPrinter, setTicketPrinter } from '@renderer/lib/ticketPrinter'
+import {
+  getTicketPrinter,
+  isAutoPrintEnabled,
+  setAutoPrintEnabled,
+  setTicketPrinter
+} from '@renderer/lib/ticketPrinter'
 import { TicketDocument } from './TicketDocument'
 import type { Database } from '@renderer/types/database.types'
 
@@ -20,6 +25,8 @@ type Weighing = Database['public']['Tables']['weighings']['Row']
 
 // Valor del selector para "usar la impresora predeterminada de Windows".
 const DEFAULT_PRINTER = '__predeterminada__'
+// Valor del selector para "no imprimir automáticamente".
+const NO_AUTO_PRINT = '__no_imprimir__'
 
 interface WeighingTicketProps {
   open: boolean
@@ -38,7 +45,9 @@ export function WeighingTicket({
   const [printing, setPrinting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [printers, setPrinters] = useState<{ name: string; displayName: string }[]>([])
-  const [autoPrinter, setAutoPrinter] = useState<string>(getTicketPrinter() ?? DEFAULT_PRINTER)
+  const [autoPrinter, setAutoPrinter] = useState<string>(
+    isAutoPrintEnabled() ? (getTicketPrinter() ?? DEFAULT_PRINTER) : NO_AUTO_PRINT
+  )
 
   useEffect(() => {
     if (!open) return
@@ -50,7 +59,9 @@ export function WeighingTicket({
 
   function handleAutoPrinterChange(value: string): void {
     setAutoPrinter(value)
-    setTicketPrinter(value === DEFAULT_PRINTER ? null : value)
+    setAutoPrintEnabled(value !== NO_AUTO_PRINT)
+    // Al apagarla se conserva la impresora elegida, para cuando se vuelva a encender.
+    if (value !== NO_AUTO_PRINT) setTicketPrinter(value === DEFAULT_PRINTER ? null : value)
   }
 
   if (!weighing) return <></>
@@ -116,15 +127,18 @@ export function WeighingTicket({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={NO_AUTO_PRINT}>No imprimir automáticamente</SelectItem>
               <SelectItem value={DEFAULT_PRINTER}>Predeterminada de Windows</SelectItem>
               {printers.map((p) => (
                 <SelectItem key={p.name} value={p.name}>
                   {p.displayName}
                 </SelectItem>
               ))}
-              {autoPrinter !== DEFAULT_PRINTER && !printers.some((p) => p.name === autoPrinter) && (
-                <SelectItem value={autoPrinter}>{autoPrinter} (no disponible)</SelectItem>
-              )}
+              {autoPrinter !== DEFAULT_PRINTER &&
+                autoPrinter !== NO_AUTO_PRINT &&
+                !printers.some((p) => p.name === autoPrinter) && (
+                  <SelectItem value={autoPrinter}>{autoPrinter} (no disponible)</SelectItem>
+                )}
             </SelectContent>
           </Select>
         </div>

@@ -10,6 +10,27 @@ export function getTicketPrinter(): string | null {
   }
 }
 
+// Impresión automática al completar un pesaje: encendida salvo que se apague en
+// este PC.
+const AUTO_PRINT_KEY = 'ticketAutoPrint'
+
+export function isAutoPrintEnabled(): boolean {
+  try {
+    return localStorage.getItem(AUTO_PRINT_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+export function setAutoPrintEnabled(enabled: boolean): void {
+  try {
+    if (enabled) localStorage.removeItem(AUTO_PRINT_KEY)
+    else localStorage.setItem(AUTO_PRINT_KEY, 'off')
+  } catch {
+    // localStorage no disponible: sigue imprimiendo.
+  }
+}
+
 export function setTicketPrinter(name: string | null): void {
   try {
     if (name) localStorage.setItem(KEY, name)

@@ -25,7 +25,7 @@ import { hasLiveWeight } from '@renderer/features/scale/scaleConnection'
 import { sendCameraMessage } from '@renderer/features/camera/cameraConnection'
 import { holdsLock } from '@renderer/features/camera/autoWeighLock'
 import { notifyError, notifyInfo } from '@renderer/components/ui/toast'
-import { getTicketPrinter } from '@renderer/lib/ticketPrinter'
+import { getTicketPrinter, isAutoPrintEnabled } from '@renderer/lib/ticketPrinter'
 import pesajeIcon from '@renderer/assets/pesaje-icon.png'
 import type { Database } from '@renderer/types/database.types'
 
@@ -158,11 +158,14 @@ export function DailyEntryScreen(): React.JSX.Element {
         // La cámara guarda la foto del camión que está en la romana como referencia
         // de esta patente: así aprende a reconocer camiones nuevos.
         sendCameraMessage({ type: 'weighing-completed', patente: updated.patente })
-        window.api.printTicketAuto(updated.id, getTicketPrinter()).catch((err: unknown) => {
-          notifyError(
-            `No se pudo imprimir el ticket automáticamente (${err instanceof Error ? err.message : err}). Use el botón Imprimir.`
-          )
-        })
+        // Se puede apagar en este PC desde el selector de impresora del ticket.
+        if (isAutoPrintEnabled()) {
+          window.api.printTicketAuto(updated.id, getTicketPrinter()).catch((err: unknown) => {
+            notifyError(
+              `No se pudo imprimir el ticket automáticamente (${err instanceof Error ? err.message : err}). Use el botón Imprimir.`
+            )
+          })
+        }
       }
     } else {
       await createMutation.mutateAsync({
