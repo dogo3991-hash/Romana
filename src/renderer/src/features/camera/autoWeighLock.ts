@@ -7,6 +7,10 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 // Si dos PCs lo piden a la vez gana el que lo pidió primero ('since').
 const CHANNEL_NAME = 'auto-weigh-lock'
 const RECONNECT_DELAY_MS = 3000
+// Un canal que lleva horas abierto puede quedar conectado a medias sin avisar
+// error: el pedido se queda 'pending' para siempre. Si pasa este tiempo sin
+// respuesta, se rehace el canal.
+const PENDING_TIMEOUT_MS = 10_000
 
 export type LockState =
   | { status: 'idle' }
@@ -25,6 +29,7 @@ const clientId = crypto.randomUUID()
 
 let channel: RealtimeChannel | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let pendingTimer: ReturnType<typeof setTimeout> | null = null
 let synced = false
 let tracked = false
 let wanted: { host: string; since: number } | null = null
@@ -35,7 +40,25 @@ function log(msg: string): void {
   console.log(`[autoWeighLock] ${msg}`)
 }
 
+function clearPendingTimer(): void {
+  if (pendingTimer) {
+    clearTimeout(pendingTimer)
+    pendingTimer = null
+  }
+}
+
 function setState(next: LockState): void {
+  // El plazo corre desde que el pedido queda pendiente, aunque se repita el estado.
+  if (next.status !== 'pending') clearPendingTimer()
+  else if (!pendingTimer && !reconnectTimer) {
+    pendingTimer = setTimeout(() => {
+      pendingTimer = null
+      if (state.status !== 'pending' || !wanted) return
+      log('el turno sigue pendiente, se rehace el canal')
+      wanted = { ...wanted, since: Date.now() }
+      scheduleReconnect()
+    }, PENDING_TIMEOUT_MS)
+  }
   if (
     state.status === next.status &&
     (next.status !== 'denied' || (state.status === 'denied' && state.holder === next.holder))
@@ -138,10 +161,12 @@ function scheduleReconnect(): void {
   dropChannel()
   evaluate()
   clearReconnectTimer()
+  clearPendingTimer()
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null
     log('reintentando conexión al canal del turno')
     join()
+    evaluate()
   }, RECONNECT_DELAY_MS)
 }
 
@@ -206,5 +231,6 @@ export function subscribeToLockState(handler: (state: LockState) => void): () =>
 export function leaveLockChannel(): void {
   releaseLock()
   clearReconnectTimer()
+  clearPendingTimer()
   dropChannel()
 }
