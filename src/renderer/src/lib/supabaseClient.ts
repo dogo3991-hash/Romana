@@ -32,3 +32,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   global: { fetch: fetchWithTimeout },
   auth: { autoRefreshToken: !isTicketPrintWindow }
 })
+
+// Por defecto Supabase solo renueva el token mientras la ventana está visible
+// (pensado para pestañas de navegador). En Electron, con la app minimizada o
+// tapada por otra ventana más de 1 h, el token vencía y los canales Realtime se
+// caían con "InvalidJWTToken": la lista dejaba de actualizarse sola cuando otro
+// PC agregaba o completaba un pesaje. Llamarlo a mano desactiva esa pausa.
+if (!isTicketPrintWindow) void supabase.auth.startAutoRefresh()
