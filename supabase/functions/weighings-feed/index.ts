@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
 
     const { data: key, error: keyError } = await adminClient
       .from('api_keys')
-      .select('id, company_id')
+      .select('id, company_id, rate_limit_per_hour')
       .eq('key_hash', await sha256Hex(apiKey))
       .eq('active', true)
       .maybeSingle()
@@ -84,6 +84,24 @@ Deno.serve(async (req) => {
     }
     if (!key) {
       return jsonResponse({ error: 'Clave inválida o desactivada' }, 401)
+    }
+
+    // Cuenta también las consultas rechazadas: si no, un cliente que reintenta
+    // sin parar nunca vería bajar su contador hasta que cambie la hora.
+    const { data: used, error: hitError } = await adminClient.rpc('api_key_hit', {
+      p_key_id: key.id
+    })
+    if (hitError) {
+      return jsonResponse({ error: 'Error al validar la clave' }, 500)
+    }
+    if (used > key.rate_limit_per_hour) {
+      return jsonResponse(
+        {
+          error: `Límite de ${key.rate_limit_per_hour} consultas por hora alcanzado; se libera en la hora siguiente`
+        },
+        429,
+        { 'Retry-After': String(secondsUntilNextHour()) }
+      )
     }
 
     const rows: WeighingRow[] = []
@@ -108,12 +126,6 @@ Deno.serve(async (req) => {
       rows.push(...data)
       if (data.length < PAGE_SIZE) break
     }
-
-    // Se registra el uso, pero un fallo acá no debe negar la respuesta.
-    await adminClient
-      .from('api_keys')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', key.id)
 
     return jsonResponse(
       {
@@ -172,9 +184,18 @@ function newApiKey(envName: string): string | undefined {
   }
 }
 
-function jsonResponse(body: unknown, status: number): Response {
+function secondsUntilNextHour(): number {
+  const now = new Date()
+  return 3600 - now.getUTCMinutes() * 60 - now.getUTCSeconds()
+}
+
+function jsonResponse(
+  body: unknown,
+  status: number,
+  extraHeaders: Record<string, string> = {}
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extraHeaders }
   })
 }
