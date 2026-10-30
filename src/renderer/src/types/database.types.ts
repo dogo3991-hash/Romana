@@ -64,6 +64,42 @@ export type Database = {
           }
         ]
       }
+      error_logs: {
+        Row: {
+          app_version: string | null
+          context: string
+          created_at: string
+          id: number
+          machine: string | null
+          message: string
+          operator_id: string | null
+          source: string
+          stack: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          context: string
+          created_at?: string
+          id?: never
+          machine?: string | null
+          message: string
+          operator_id?: string | null
+          source: string
+          stack?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          context?: string
+          created_at?: string
+          id?: never
+          machine?: string | null
+          message?: string
+          operator_id?: string | null
+          source?: string
+          stack?: string | null
+        }
+        Relationships: []
+      }
       historical_monthly_totals: {
         Row: {
           company_id: string

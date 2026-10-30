@@ -1,5 +1,6 @@
 import { QueryClient, MutationCache } from '@tanstack/react-query'
 import { notifyError } from '@renderer/components/ui/toast'
+import { reportError } from '@renderer/lib/errorReporter'
 
 function errorMessage(error: unknown): string {
   if (
@@ -31,6 +32,7 @@ export const queryClient = new QueryClient({
   },
   mutationCache: new MutationCache({
     onError: (error) => {
+      reportError('no se pudo guardar', error)
       notifyError(`No se pudo guardar: ${errorMessage(error)}`)
     }
   })

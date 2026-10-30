@@ -4,6 +4,7 @@ import { supabase } from '@renderer/lib/supabaseClient'
 import { getOfflineDb } from '@renderer/lib/offlineDb'
 import { readThroughOne } from '@renderer/lib/offlineRepo'
 import { queryClient } from '@renderer/lib/queryClient'
+import { reportError } from '@renderer/lib/errorReporter'
 import { SELECTED_COMPANY_STORAGE_KEY } from '@renderer/features/companies/CompanyContext'
 import type { Database } from '@renderer/types/database.types'
 
@@ -77,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         setOperator(data)
       } catch (err) {
         if (cancelled) return
-        console.error('loadOperator failed:', err)
+        reportError('loadOperator failed', err)
         setAuthError(err instanceof Error ? err.message : 'sin conexión con el servidor')
       } finally {
         if (!cancelled) setLoading(false)
@@ -140,7 +141,7 @@ async function clearLocalUserData(): Promise<void> {
     ] as const
     await Promise.all(stores.map((store) => db.clear(store)))
   } catch (err) {
-    console.error('clearLocalUserData failed:', err)
+    reportError('clearLocalUserData failed', err)
   }
   try {
     localStorage.removeItem(SELECTED_COMPANY_STORAGE_KEY)

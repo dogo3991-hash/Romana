@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { ErrorReport } from '../main/logger'
 
 // Custom APIs for renderer
 const api = {
@@ -25,6 +26,16 @@ const api = {
     ipcRenderer.send('ticket-print-error', message)
   },
   openPath: (filePath: string): Promise<string> => ipcRenderer.invoke('open-path', filePath),
+  appInfo: (): Promise<{ version: string; machine: string }> => ipcRenderer.invoke('app-info'),
+  logError: (report: ErrorReport): void => {
+    ipcRenderer.send('log:error', report)
+  },
+  onMainError: (callback: (report: ErrorReport) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, report: ErrorReport): void =>
+      callback(report)
+    ipcRenderer.on('main-error', listener)
+    return () => ipcRenderer.removeListener('main-error', listener)
+  },
   cameraProcess: {
     start: (): Promise<{ started: boolean; error?: string }> =>
       ipcRenderer.invoke('camera-process:start'),

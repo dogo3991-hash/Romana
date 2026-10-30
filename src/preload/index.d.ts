@@ -1,5 +1,13 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+// Igual a ErrorReport de src/main/logger.ts (este archivo lo usa el renderer,
+// que no puede importar código del proceso main).
+export interface ErrorReport {
+  context: string
+  message: string
+  stack: string | null
+}
+
 interface Api {
   saveFile: (
     buffer: ArrayBuffer,
@@ -16,6 +24,11 @@ interface Api {
   notifyPrintReady: () => void
   notifyPrintError: (message: string) => void
   openPath: (filePath: string) => Promise<string>
+  appInfo: () => Promise<{ version: string; machine: string }>
+  // Escribe el error en el archivo de log local (lo guarda el proceso main).
+  logError: (report: ErrorReport) => void
+  // Errores del proceso main, para subirlos a Supabase desde la ventana principal.
+  onMainError: (callback: (report: ErrorReport) => void) => () => void
   cameraProcess: {
     start: () => Promise<{ started: boolean; error?: string }>
     stop: () => Promise<void>
