@@ -1,6 +1,7 @@
 import { autoUpdater } from 'electron-updater'
 import { dialog } from 'electron'
 import { is } from '@electron-toolkit/utils'
+import { logMainError } from './logger'
 
 /**
  * Busca actualizaciones en el Release de GitHub configurado en electron-builder.yml,
@@ -30,10 +31,10 @@ export function setupAutoUpdater(): void {
   })
 
   autoUpdater.on('error', (err) => {
-    console.error('autoUpdater error:', err)
+    logMainError('autoUpdater error', err)
   })
 
   autoUpdater.checkForUpdates().catch((err) => {
-    console.error('checkForUpdates falló:', err)
+    logMainError('checkForUpdates falló', err)
   })
 }

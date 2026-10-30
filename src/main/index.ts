@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join, dirname, basename } from 'path'
+import { hostname } from 'os'
 import { writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -11,6 +12,7 @@ import {
 } from './cameraProcess'
 import { startScaleReading, stopScaleReading } from './scaleSerial'
 import { setupAutoUpdater } from './autoUpdate'
+import { initLogging, setErrorReportTarget } from './logger'
 
 // Esta app corre empaquetada sin consola adjunta: si stdout/stderr queda como un pipe
 // roto, cualquier console.log/error revienta el proceso principal con EPIPE (el error
@@ -34,6 +36,9 @@ if (is.dev) {
   const defaultUserData = app.getPath('userData')
   app.setPath('userData', join(dirname(defaultUserData), `${basename(defaultUserData)}-dev`))
 }
+
+// Después del cambio de userData de arriba: el archivo de log va dentro de esa carpeta.
+initLogging()
 
 interface SaveFileRequest {
   buffer: ArrayBuffer
@@ -195,6 +200,8 @@ function createWindow(): void {
     }
   })
 
+  setErrorReportTarget(mainWindow.webContents)
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -245,6 +252,7 @@ app.whenReady().then(() => {
       displayName: p.displayName || p.name
     }))
   )
+  ipcMain.handle('app-info', () => ({ version: app.getVersion(), machine: hostname() }))
   ipcMain.handle('open-path', (_event, filePath: string) => shell.openPath(filePath))
   ipcMain.handle('camera-process:start', () => startCameraProcess())
   ipcMain.handle('camera-process:stop', () => stopCameraProcess())
