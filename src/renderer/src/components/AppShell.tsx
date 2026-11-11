@@ -1,10 +1,14 @@
 import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { RefreshCw, Video, VideoOff, Loader2 } from 'lucide-react'
+import { RefreshCw, Video, VideoOff, Loader2, Scale } from 'lucide-react'
 import { useAuth } from '@renderer/auth/AuthProvider'
 import { Button } from '@renderer/components/ui/button'
 import { cn } from '@renderer/lib/utils'
 import { useCameraProcess } from '@renderer/features/camera/useCameraProcess'
+import {
+  setScaleTruckAlertEnabled,
+  useScaleTruckAlertEnabled
+} from '@renderer/features/scale/scaleTruckAlert'
 import { SyncStatusIndicator } from '@renderer/components/SyncStatusIndicator'
 import { drainQueue } from '@renderer/lib/syncEngine'
 import logo from '@renderer/assets/logo.png'
@@ -22,6 +26,7 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { operator, signOut } = useAuth()
   const camera = useCameraProcess()
+  const scaleAlert = useScaleTruckAlertEnabled()
 
   useEffect(() => {
     void drainQueue()
@@ -103,6 +108,24 @@ export function AppShell({ children }: { children: React.ReactNode }): React.JSX
                 Activar cámara
               </>
             )}
+          </Button>
+          <Button
+            variant={scaleAlert ? 'destructive' : 'outline'}
+            size="sm"
+            className={
+              scaleAlert
+                ? undefined
+                : 'border-transparent bg-success text-white hover:bg-success/90'
+            }
+            title={
+              scaleAlert
+                ? 'Desactiva la alerta por romana'
+                : 'Suena la alerta de camión cuando la romana supera 1000 kg (sin pesaje automático). Apaga la detección de la cámara, que sigue mostrando la imagen.'
+            }
+            onClick={() => setScaleTruckAlertEnabled(!scaleAlert)}
+          >
+            <Scale className="h-4 w-4" />
+            {scaleAlert ? 'Detener alerta romana' : 'Alerta por romana'}
           </Button>
           <Button
             variant="ghost"
