@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { format } from 'date-fns'
+import { useFollowToday, useToday } from '@renderer/lib/useToday'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useCompanyContext } from '@renderer/features/companies/CompanyContext'
 import { useAllTrucks } from '@renderer/features/trucks/useTrucksAdmin'
@@ -170,11 +172,15 @@ export function TruckHistorySection(): React.JSX.Element {
   )
   const [patente, setPatente] = useState<string | null>(null)
   const [granularity, setGranularity] = useState<Granularity>('diario')
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [month, setMonth] = useState(() => format(new Date(), 'yyyy-MM'))
   const [year, setYear] = useState(() => String(new Date().getFullYear()))
-  const [tableDay, setTableDay] = useState(() => new Date().toISOString().slice(0, 10))
-  const [tableMonth, setTableMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [tableDay, setTableDay] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const [tableMonth, setTableMonth] = useState(() => format(new Date(), 'yyyy-MM'))
   const [tableYear, setTableYear] = useState(() => String(new Date().getFullYear()))
+  const today = useToday()
+  useFollowToday(today, tableDay, setTableDay)
+  useFollowToday(today.slice(0, 7), month, setMonth)
+  useFollowToday(today.slice(0, 7), tableMonth, setTableMonth)
 
   const trucks = allTrucks ?? []
 

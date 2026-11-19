@@ -26,6 +26,7 @@ import { sendCameraMessage } from '@renderer/features/camera/cameraConnection'
 import { holdsLock } from '@renderer/features/camera/autoWeighLock'
 import { notifyError, notifyInfo } from '@renderer/components/ui/toast'
 import { getTicketPrinter, isAutoPrintEnabled } from '@renderer/lib/ticketPrinter'
+import { useFollowToday, useToday } from '@renderer/lib/useToday'
 import pesajeIcon from '@renderer/assets/pesaje-icon.png'
 import type { Database } from '@renderer/types/database.types'
 
@@ -47,6 +48,13 @@ export function DailyEntryScreen(): React.JSX.Element {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [historyWeighingId, setHistoryWeighingId] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+
+  // La app queda abierta de un día para otro: si se estaba viendo el día actual,
+  // la fecha avanza sola a medianoche (esperando a que se cierre un formulario abierto).
+  const today = useToday()
+  useFollowToday(today, fecha, setFecha, formOpen, (nuevo) =>
+    notifyInfo(`Cambió el día: mostrando ${nuevo.split('-').reverse().join('-')}`)
+  )
 
   const { data: weighings, isLoading } = useDailyWeighings(companyId, fecha)
   const { data: dailySummary } = useDailySummary(companyId, fecha)
@@ -86,7 +94,7 @@ export function DailyEntryScreen(): React.JSX.Element {
 
   function startAutoWeigh(w: Weighing): void {
     if (isViewer) return
-    if (fecha !== format(new Date(), 'yyyy-MM-dd')) {
+    if (fecha !== today) {
       notifyInfo(
         `La cámara reconoció ${w.patente}: cambie la fecha a hoy para el pesaje automático.`
       )
