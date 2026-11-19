@@ -12,6 +12,7 @@ import { drainQueue, getPendingSyncCount } from '@renderer/lib/syncEngine'
 import { useWeighingsInRange } from './useReportsData'
 import { exportHistoricalReport, exportWeighingsReport } from './exportExcel'
 import { TruckHistorySection } from './TruckHistorySection'
+import { useFollowToday, useToday } from '@renderer/lib/useToday'
 
 export function ReportsScreen(): React.JSX.Element {
   const { companyId, companies, loading: companyLoading } = useCompanyContext()
@@ -19,6 +20,9 @@ export function ReportsScreen(): React.JSX.Element {
   const isViewer = !!operator?.is_viewer
   const [from, setFrom] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [to, setTo] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const today = useToday()
+  useFollowToday(today, from, setFrom)
+  useFollowToday(today, to, setTo)
   const [exportingDetail, setExportingDetail] = useState(false)
   const [exportingHistorical, setExportingHistorical] = useState(false)
   const [error, setError] = useState<string | null>(null)

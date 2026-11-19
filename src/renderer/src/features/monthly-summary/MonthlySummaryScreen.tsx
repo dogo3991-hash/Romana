@@ -6,10 +6,12 @@ import { Input } from '@renderer/components/ui/input'
 import { Badge } from '@renderer/components/ui/badge'
 import { useDailyBreakdown, useMonthTotal } from './useMonthlySummary'
 import { DayDetailDialog } from './DayDetailDialog'
+import { useFollowToday, useToday } from '@renderer/lib/useToday'
 
 export function MonthlySummaryScreen(): React.JSX.Element {
   const { companyId, loading: companyLoading } = useCompanyContext()
   const [monthValue, setMonthValue] = useState(() => format(new Date(), 'yyyy-MM'))
+  useFollowToday(useToday().slice(0, 7), monthValue, setMonthValue)
   const [year, month] = monthValue.split('-').map(Number)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
